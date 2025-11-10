@@ -87,7 +87,9 @@ export function CreatePacienteDialog({
 }: CreatePacienteDialogProps) {
 	const { mutateAsync: createPaciente, isPending } = useCreatePaciente()
 
-	const form = useForm<FormValues>({
+	// [CORREÇÃO] Remova o <FormValues> daqui.
+	// O hook vai inferir o tipo automaticamente do zodResolver.
+	const form = useForm({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			nome: '',
@@ -98,7 +100,8 @@ export function CreatePacienteDialog({
 		},
 	})
 
-	// Lógica de Submit (Mantida)
+	// A lógica de Submit (Mantida)
+	// Agora 'data' terá o tipo correto inferido do schema
 	const onSubmit = async (data: FormValues) => {
 		try {
 			await createPaciente(data)

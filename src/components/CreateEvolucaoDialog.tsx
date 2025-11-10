@@ -6,7 +6,6 @@ import {
 	useCreateEvolucao,
 	useTranscribeAudio,
 } from '@/app/queries/evolucao.queries'
-import { useAuthStore } from '@/app/stores/useAuthStore'
 
 // Zod e React Hook Form
 import { z } from 'zod'
@@ -33,7 +32,7 @@ import {
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Mic, StopCircle, Send, Loader2, AlertCircle } from 'lucide-react'
+import { Mic, StopCircle, Loader2, AlertCircle } from 'lucide-react'
 
 // 1. Schema de Validação (Apenas a descrição)
 const evolucaoFormSchema = z.object({

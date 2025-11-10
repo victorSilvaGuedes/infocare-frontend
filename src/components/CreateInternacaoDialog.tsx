@@ -49,7 +49,7 @@ import { AppLoader } from './AppLoader'
 // 1. Schema de Validação (Agora inclui idPaciente)
 const internacaoFormSchema = z.object({
 	// O Zod espera uma string do formulário, vamos converter para número
-	idPaciente: z.string({ required_error: 'Selecione um paciente.' }),
+	idPaciente: z.string().min(1, { message: 'Selecione um paciente.' }),
 	diagnostico: z.string().optional(),
 	observacoes: z.string().optional(),
 	quarto: z.string().optional(),

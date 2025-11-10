@@ -114,7 +114,7 @@ export function EditPacienteDialog({
 	const { mutate: updatePaciente, isPending: isUpdating } = useUpdatePaciente()
 
 	// 5. Configuração do Formulário
-	const form = useForm<UpdatePacienteFormValues>({
+	const form = useForm({
 		resolver: zodResolver(updatePacienteSchema),
 		// Valores padrão vazios ou indefinidos
 		defaultValues: {
