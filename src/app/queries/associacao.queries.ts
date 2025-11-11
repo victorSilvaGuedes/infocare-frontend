@@ -75,7 +75,7 @@ export function useAprovarAssociacao() {
 	return useMutation<void, AxiosError<ApiErrorResponse>, number>({
 		mutationFn: aprovarAssociacao,
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['associacoes'] })
+			queryClient.invalidateQueries({ queryKey: ['associacoes'], exact: false })
 			toast.success('Solicitação aprovada com sucesso!')
 		},
 		onError: (error) => {
@@ -97,7 +97,7 @@ export function useRejeitarAssociacao() {
 	return useMutation<void, AxiosError<ApiErrorResponse>, number>({
 		mutationFn: rejeitarAssociacao,
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['associacoes'] })
+			queryClient.invalidateQueries({ queryKey: ['associacoes'], exact: false })
 			toast.info('Solicitação rejeitada.')
 		},
 		onError: (error) => {
