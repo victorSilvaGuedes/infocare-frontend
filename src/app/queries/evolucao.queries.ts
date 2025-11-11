@@ -1,10 +1,9 @@
 // Salve como: app/queries/evolucao.queries.ts
-
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { AxiosError } from 'axios'
-import api from '@/lib/api' // (Certifique-se que o seu apiClient (axios) está em '@/lib/api')
+import api from '@/lib/api'
 import { toast } from 'sonner'
 
 // --- Tipos de Erro e Evolução ---
@@ -33,18 +32,6 @@ export type CreateEvolucaoDTO = {
 	descricao: string
 }
 
-// (Dados para TRANSCREVER - POST /evolucoes/transcrever)
-// O FormData aceita File | Blob
-export type TranscribeAudioDTO = {
-	audioFile: Blob
-}
-
-// (Tipo da Resposta da Transcrição)
-// Esta é a definição correta que bate com o backend
-export type TranscribeAudioResponse = {
-	transcricao: string
-}
-
 // --- Hook POST (Criar Evolução) ---
 const createEvolucao = async (data: CreateEvolucaoDTO): Promise<Evolucao> => {
 	const { data: evolucao } = await api.post('/evolucoes', data)
@@ -58,9 +45,7 @@ export function useCreateEvolucao() {
 		{
 			mutationFn: createEvolucao,
 			onSuccess: (novaEvolucao) => {
-				// Quando uma evolução é criada, invalidamos a query
-				// da internação específica, para que ela recarregue
-				// com a nova evolução na lista (quando formos ver detalhes).
+				// Invalida a query da internação específica
 				queryClient.invalidateQueries({
 					queryKey: ['internacao', novaEvolucao.idInternacao],
 				})
@@ -79,39 +64,4 @@ export function useCreateEvolucao() {
 	)
 }
 
-// --- Hook POST (Transcrever Áudio) ---
-const transcribeAudio = async (
-	data: TranscribeAudioDTO
-): Promise<TranscribeAudioResponse> => {
-	const formData = new FormData() // O backend (multer) vai esperar pelo campo 'audio'
-	formData.append('audio', data.audioFile)
-
-	const response = await api.post('/evolucoes/transcrever', formData, {
-		headers: {
-			'Content-Type': 'multipart/form-data',
-		},
-	})
-	// response.data aqui será { transcricao: "..." }
-	return response.data
-}
-
-export function useTranscribeAudio() {
-	// Não precisamos invalidar queries aqui
-	return useMutation<
-		TranscribeAudioResponse, // <-- Usa o tipo correto
-		AxiosError<ApiErrorResponse>,
-		TranscribeAudioDTO
-	>({
-		mutationFn: transcribeAudio,
-		onSuccess: () => {
-			toast.success('Áudio transcrito com sucesso!')
-		},
-		onError: (error) => {
-			const errorMessage =
-				error.response?.data?.message || 'Falha ao conectar com o servidor.'
-			toast.error('Erro ao transcrever áudio', {
-				description: errorMessage,
-			})
-		},
-	})
-}
+// (TODA A LÓGICA DE TRANSCRIÇÃO FOI MOVIDA PARA util.queries.ts)

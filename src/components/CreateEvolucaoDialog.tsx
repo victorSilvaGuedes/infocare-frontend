@@ -2,10 +2,13 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import {
-	useCreateEvolucao,
-	useTranscribeAudio,
-} from '@/app/queries/evolucao.queries'
+// ======================================================
+// 1. IMPORTAÇÃO REATORADA
+//    useTranscribeAudio agora vem do novo 'util.queries'
+// ======================================================
+import { useCreateEvolucao } from '@/app/queries/evolucao.queries'
+import { useTranscribeAudio } from '@/app/queries/util.queries'
+// ======================================================
 
 // Zod e React Hook Form
 import { z } from 'zod'
@@ -57,7 +60,7 @@ export function CreateEvolucaoDialog({
 	open,
 	onOpenChange,
 }: CreateEvolucaoDialogProps) {
-	// 3. Hooks de Mutação
+	// 3. Hooks de Mutação (Corrigidos)
 	const { mutate: createEvolucao, isPending: isSaving } = useCreateEvolucao()
 	const { mutateAsync: transcribeAudio, isPending: isTranscribing } =
 		useTranscribeAudio()
@@ -76,8 +79,42 @@ export function CreateEvolucaoDialog({
 		defaultValues: { descricao: '' },
 	})
 
-	// 6. Funções de Gravação (MediaRecorder API)
+	// ======================================================
+	// 7. FUNÇÃO DE TRANSCRIÇÃO ATUALIZADA
+	//    Agora aceita um 'blob' opcional para evitar
+	//    problemas de 'state' (race conditions).
+	// ======================================================
+	const handleTranscribe = async (directBlob?: Blob) => {
+		// Usa o blob passado diretamente (de 'onstop')
+		// ou o blob do 'state' (do botão 'Tentar Novamente')
+		const blobToTranscribe = directBlob || audioBlob
+		if (!blobToTranscribe) return
 
+		setAudioError(null) // Limpa erros antigos
+		try {
+			const data = await transcribeAudio({ audioFile: blobToTranscribe })
+			const textoTranscrevido = data.transcricao
+
+			// Atualiza o formulário
+			const textoAtual = form.getValues('descricao')
+			form.setValue(
+				'descricao',
+				textoAtual ? `${textoAtual}\n\n${textoTranscrevido}` : textoTranscrevido
+			)
+
+			setAudioBlob(null) // Sucesso! Limpa o blob.
+		} catch (err) {
+			console.error('Falha na mutação de transcrição', err)
+			// Falha! Se veio do 'onstop', seta o blob no state
+			// para que o botão 'Tentar Novamente' apareça.
+			if (directBlob) {
+				setAudioBlob(directBlob)
+			}
+			setAudioError('A transcrição falhou. Verifique sua conexão.')
+		}
+	}
+
+	// 6. Funções de Gravação (MediaRecorder API)
 	const startRecording = async () => {
 		setAudioError(null)
 		setAudioBlob(null)
@@ -87,23 +124,24 @@ export function CreateEvolucaoDialog({
 					audio: true,
 				})
 				mediaRecorderRef.current = new MediaRecorder(stream)
-
-				// Limpa os pedaços antigos
 				audioChunksRef.current = []
 
-				// Ouve os dados
 				mediaRecorderRef.current.ondataavailable = (event) => {
 					audioChunksRef.current.push(event.data)
 				}
 
-				// Gravação parada
+				// ======================================================
+				// 8. MUDANÇA PRINCIPAL (Transcrever ao Parar)
+				//    'onstop' agora chama 'handleTranscribe'
+				//    automaticamente.
+				// ======================================================
 				mediaRecorderRef.current.onstop = () => {
 					const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-					setAudioBlob(blob)
 					setIsRecording(false)
+					handleTranscribe(blob) // CHAMA A TRANSCRIÇÃO IMEDIATAMENTE
 				}
+				// ======================================================
 
-				// Inicia
 				mediaRecorderRef.current.start()
 				setIsRecording(true)
 			} catch (err) {
@@ -119,44 +157,14 @@ export function CreateEvolucaoDialog({
 
 	const stopRecording = () => {
 		if (mediaRecorderRef.current && isRecording) {
-			mediaRecorderRef.current.stop()
-			// Desliga a trilha do microfone (luzinha)
+			mediaRecorderRef.current.stop() // Isso irá disparar o 'onstop'
 			mediaRecorderRef.current.stream
 				.getTracks()
 				.forEach((track) => track.stop())
 		}
 	}
 
-	// 7. Função de Transcrição
-	const handleTranscribe = async () => {
-		if (!audioBlob) return
-		try {
-			// Chamamos a mutação (que chama nosso backend)
-			// 'data' aqui será: { transcricao: "..." }
-			const data = await transcribeAudio({ audioFile: audioBlob })
-
-			// --- A CORREÇÃO ESTÁ AQUI ---
-			// Lemos data.transcricao em vez de data.text
-			const textoTranscrevido = data.transcricao
-			// --- FIM DA CORREÇÃO ---
-
-			// Atualiza o formulário com o texto retornado
-			const textoAtual = form.getValues('descricao')
-			form.setValue(
-				'descricao',
-				textoAtual
-					? `${textoAtual}\n\n${textoTranscrevido}` // Usa a variável corrigida
-					: textoTranscrevido // Usa a variável corrigida
-			)
-
-			setAudioBlob(null) // Limpa o áudio após transcrição
-		} catch (err) {
-			// O onError do 'useTranscribeAudio' (que não vimos) já mostra o toast
-			console.error('Falha na mutação de transcrição', err)
-		}
-	}
-
-	// 8. Handler de Submissão Final
+	// 9. Handler de Submissão Final (Sem mudanças)
 	const onSubmit = (values: EvolucaoFormValues) => {
 		if (!internacaoId) return
 
@@ -168,7 +176,7 @@ export function CreateEvolucaoDialog({
 			{
 				onSuccess: () => {
 					form.reset()
-					onOpenChange(false) // Fecha o dialog
+					onOpenChange(false)
 				},
 			}
 		)
@@ -191,7 +199,7 @@ export function CreateEvolucaoDialog({
 				{audioError && (
 					<Alert variant="destructive">
 						<AlertCircle className="h-4 w-4" />
-						<AlertTitle>Erro no Áudio</AlertTitle>
+						<AlertTitle>Erro na Transcrição</AlertTitle>
 						<AlertDescription>{audioError}</AlertDescription>
 					</Alert>
 				)}
@@ -228,7 +236,7 @@ export function CreateEvolucaoDialog({
 									size="icon"
 									className="h-16 w-16 rounded-full border-2 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600"
 									onClick={startRecording}
-									disabled={isTranscribing}
+									disabled={isTranscribing} // Desativa se uma transcrição ainda estiver ocorrendo
 								>
 									<Mic className="h-8 w-8" />
 									<span className="sr-only">Gravar</span>
@@ -247,15 +255,21 @@ export function CreateEvolucaoDialog({
 								</Button>
 							)}
 
+							{/* ======================================================
+                  10. BOTÃO DE TENTAR NOVAMENTE
+                      Só aparece se a transcrição falhar (audioBlob existir)
+                  ====================================================== */}
 							{audioBlob && !isTranscribing && (
 								<Button
 									type="button"
-									onClick={handleTranscribe}
+									onClick={() => handleTranscribe()} // Chama sem argumento
 									className="flex-1"
+									variant="outline"
 								>
-									Transcrever Áudio
+									Tentar Transcrição Novamente
 								</Button>
 							)}
+							{/* ====================================================== */}
 
 							{isTranscribing && (
 								<Button
