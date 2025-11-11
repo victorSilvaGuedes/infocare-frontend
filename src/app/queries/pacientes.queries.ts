@@ -1,30 +1,45 @@
-// app/queries/pacientes.queries.ts
+// Salve em: app/queries/pacientes.queries.ts
+// (Versão ATUALIZADA com 'Internacao' e 'PacienteDetails')
+
 'use client'
 
-// 1. ADICIONE useMutation, useQueryClient
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { AxiosError } from 'axios' // 1. IMPORTAR O TIPO DE ERRO DO AXIOS
+import type { AxiosError } from 'axios'
 import api from '@/lib/api'
-import { Paciente } from '@/lib/types'
+import { Paciente } from '@/lib/types' // O seu tipo 'Paciente' básico
 import { toast } from 'sonner'
 
-// --- Tipo para os dados de CRIAÇÃO (Baseado no Zod do backend) ---
+// 1. (NOVO) Importar o tipo Internacao (básico)
+// (Assumindo que 'internacao.queries.ts' exporta este tipo)
+// Se der erro aqui, crie o tipo: export type Internacao = { [qualquercoisa]: any }
+// (Idealmente, importe o tipo 'Internacao' que definimos em 'internacao.queries.ts')
+import { Internacao } from './internacao.queries'
+
+// --- Tipos de DTOs e Erros (Existentes) ---
+
 export type CreatePacienteDTO = {
 	nome: string
 	cpf: string
-	dataNascimento: Date // O formulário usará Date
+	dataNascimento: Date
 	tipoSanguineo?: string
 	telefone?: string
 }
 
-// 2. (NOVO) TIPO PARA A RESPOSTA DE ERRO DA NOSSA API
 type ApiErrorResponse = {
 	message: string
 	status?: 'error'
 	errors?: Array<{ campo: string; mensagem: string }>
 }
 
-// --- (Existente) Hook GET ---
+export type UpdatePacienteData = Partial<CreatePacienteDTO> & { id: number }
+
+// 2. (NOVO) Tipo de Detalhes do Paciente
+// (Inclui as internações, como o backend envia em GET /pacientes/:id)
+export type PacienteDetails = Paciente & {
+	internacoes: Internacao[] // <--- A ADIÇÃO CRÍTICA
+}
+
+// --- Hooks GET (Listagem - sem alteração) ---
 const fetchPacientes = async (): Promise<Paciente[]> => {
 	const { data } = await api.get('/pacientes')
 	return data
@@ -37,106 +52,64 @@ export function usePacientes() {
 	})
 }
 
-// --- (NOVO) Hook POST (Criar Paciente) ---
+// --- 3. (ATUALIZADO) Hook GET (Buscar por ID) ---
+const fetchPacienteById = async (
+	pacienteId: number
+): Promise<PacienteDetails> => {
+	// <--- ATUALIZADO TIPO DE RETORNO
+	const { data } = await api.get(`/pacientes/${pacienteId}`)
+	return data
+}
+
+export function usePacienteById(pacienteId: number | null | undefined) {
+	return useQuery<PacienteDetails, Error>({
+		// <--- ATUALIZADO TIPO DE RETORNO
+		queryKey: ['paciente', pacienteId],
+		queryFn: () => fetchPacienteById(pacienteId!),
+		enabled: !!pacienteId,
+	})
+}
+
+// --- Hooks de Mutação (POST, PUT, DELETE - sem alteração) ---
+
+// (useCreatePaciente - sem alteração)
 const createPaciente = async (
 	pacienteData: CreatePacienteDTO
 ): Promise<Paciente> => {
 	const { data } = await api.post('/pacientes', pacienteData)
 	return data
 }
-
 export function useCreatePaciente() {
 	const queryClient = useQueryClient()
-
-	// 3. ATUALIZAR O TIPO DE ERRO GENÉRICO
-	return useMutation<
-		Paciente,
-		AxiosError<ApiErrorResponse>, // <--- DE Error PARA AxiosError
-		CreatePacienteDTO
-	>({
-		mutationFn: createPaciente,
-		onSuccess: (novoPaciente) => {
-			queryClient.invalidateQueries({ queryKey: ['pacientes'] })
-			toast.success('Paciente criado com sucesso!', {
-				description: `${novoPaciente.nome} foi adicionado.`,
-			})
-		},
-		// 4. ATUALIZAR A ASSINATURA do onError
-		onError: (error) => {
-			// <--- REMOVIDO o ': any'
-			// 'error' agora é do tipo AxiosError<ApiErrorResponse>
-			const errorMessage = error.response?.data?.message || error.message
-			toast.error('Erro ao criar paciente', {
-				description: errorMessage,
-			})
-		},
-	})
+	return useMutation<Paciente, AxiosError<ApiErrorResponse>, CreatePacienteDTO>(
+		{
+			mutationFn: createPaciente,
+			onSuccess: (novoPaciente) => {
+				queryClient.invalidateQueries({ queryKey: ['pacientes'] })
+				toast.success('Paciente criado com sucesso!', {
+					description: `${novoPaciente.nome} foi adicionado.`,
+				})
+			},
+			onError: (error) => {
+				const errorMessage = error.response?.data?.message || error.message
+				toast.error('Erro ao criar paciente', {
+					description: errorMessage,
+				})
+			},
+		}
+	)
 }
 
-// --- (NOVO) Hook DELETE (Excluir Paciente) ---
-const deletePaciente = async (pacienteId: number): Promise<void> => {
-	await api.delete(`/pacientes/${pacienteId}`)
-}
-
-export function useDeletePaciente() {
-	const queryClient = useQueryClient()
-
-	// 5. ATUALIZAR O TIPO DE ERRO GENÉRICO
-	return useMutation<
-		void,
-		AxiosError<ApiErrorResponse>, // <--- DE Error PARA AxiosError
-		number
-	>({
-		mutationFn: deletePaciente,
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ['pacientes'] })
-			toast.success('Paciente excluído com sucesso.')
-		},
-		// 6. ATUALIZAR A ASSINATURA do onError
-		onError: (error) => {
-			// <--- REMOVIDO o ': any'
-			const errorMessage = error.response?.data?.message || error.message
-			toast.error('Erro ao excluir paciente', {
-				description: errorMessage,
-			})
-		},
-	})
-}
-
-export type UpdatePacienteData = Partial<CreatePacienteDTO> & { id: number }
-
-// --- (NOVO) Tipo de Resposta de Paciente Único ---
-// O endpoint GET /pacientes/:id retorna o mesmo tipo Paciente
-const fetchPacienteById = async (pacienteId: number): Promise<Paciente> => {
-	const { data } = await api.get(`/pacientes/${pacienteId}`)
-	return data
-}
-
-export function usePacienteById(pacienteId: number | null | undefined) {
-	return useQuery<Paciente, Error>({
-		// A query key é um array. O segundo item é o ID.
-		queryKey: ['paciente', pacienteId],
-		queryFn: () => fetchPacienteById(pacienteId!), // O '!' é seguro por causa do 'enabled'
-		// 'enabled: !!pacienteId' é crucial:
-		// Isso previne que a query rode com um ID 'undefined'
-		// quando o dialog estiver fechado.
-		enabled: !!pacienteId,
-	})
-}
-
-// --- (NOVO) Hook PUT (Atualizar Paciente) ---
+// (useUpdatePaciente - sem alteração)
 const updatePaciente = async ({
 	id,
 	...pacienteData
 }: UpdatePacienteData): Promise<Paciente> => {
-	// O 'pacienteData' contém os campos (nome, cpf, etc.)
 	const { data } = await api.put(`/pacientes/${id}`, pacienteData)
 	return data
 }
-
 export function useUpdatePaciente() {
 	const queryClient = useQueryClient()
-
 	return useMutation<
 		Paciente,
 		AxiosError<ApiErrorResponse>,
@@ -144,29 +117,40 @@ export function useUpdatePaciente() {
 	>({
 		mutationFn: updatePaciente,
 		onSuccess: (pacienteAtualizado) => {
-			// 1. Invalida a lista de pacientes (para atualizar a UI)
 			queryClient.invalidateQueries({ queryKey: ['pacientes'] })
-
-			// 2. Invalida o cache deste paciente específico
 			queryClient.invalidateQueries({
 				queryKey: ['paciente', pacienteAtualizado.id],
 			})
-
-			// 3. (Opcional, mas recomendado) Atualiza o cache imediatamente
-			// Se não fizermos isso, o dialog pode mostrar dados antigos
-			// se for reaberto antes da invalidação (ponto 2) completar.
 			queryClient.setQueryData(
 				['paciente', pacienteAtualizado.id],
 				pacienteAtualizado
 			)
-
-			toast.success('Paciente atualizado com sucesso!', {
-				description: `${pacienteAtualizado.nome} foi atualizado.`,
-			})
+			toast.success('Paciente atualizado com sucesso!')
 		},
 		onError: (error) => {
 			const errorMessage = error.response?.data?.message || error.message
 			toast.error('Erro ao atualizar paciente', {
+				description: errorMessage,
+			})
+		},
+	})
+}
+
+// (useDeletePaciente - sem alteração)
+const deletePaciente = async (pacienteId: number): Promise<void> => {
+	await api.delete(`/pacientes/${pacienteId}`)
+}
+export function useDeletePaciente() {
+	const queryClient = useQueryClient()
+	return useMutation<void, AxiosError<ApiErrorResponse>, number>({
+		mutationFn: deletePaciente,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['pacientes'] })
+			toast.success('Paciente excluído com sucesso.')
+		},
+		onError: (error) => {
+			const errorMessage = error.response?.data?.message || error.message
+			toast.error('Erro ao excluir paciente', {
 				description: errorMessage,
 			})
 		},

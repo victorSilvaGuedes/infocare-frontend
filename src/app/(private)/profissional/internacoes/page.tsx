@@ -1,9 +1,12 @@
 // Salve como: app/(private)/profissional/internacoes/page.tsx
-// (Versão ATUALIZADA com Filtros, Badges de Status e Ações Condicionais)
 'use client'
 
-import { useState } from 'react'
+// Imports do React
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+
+// Hooks de dados
 import {
 	useGetInternacoes,
 	InternacaoComRelacoes,
@@ -15,7 +18,6 @@ import {
 import { AppLoader } from '@/components/AppLoader'
 import { CreateInternacaoDialog } from '@/components/CreateInternacaoDialog'
 import { EditInternacaoDialog } from '@/components/EditInternacaoDialog'
-// 1. (NOVO) Importar o Dialog de Evolução
 import { CreateEvolucaoDialog } from '@/components/CreateEvolucaoDialog'
 
 // UI
@@ -29,6 +31,13 @@ import {
 } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog'
+import {
 	AlertDialog,
 	AlertDialogAction,
 	AlertDialogCancel,
@@ -38,100 +47,101 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-// 2. (NOVOS) Imports para o Filtro
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
-// 3. (NOVOS ÍCONES)
+import { Input } from '@/components/ui/input'
 import {
 	ArrowLeft,
 	AlertTriangle,
-	BedDouble,
 	Plus,
 	Edit,
 	Trash2,
 	LogOut,
-	FilePlus, // Para "Adicionar Evolução"
+	FilePlus,
+	ClipboardList,
+	SquareMousePointer,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
-// Tipo para o nosso filtro de estado
 type StatusFilter = 'ATIVA' | 'ALTA' | 'TODAS'
 
 export default function InternacoesPage() {
-	// 4. (ATUALIZADO) Hooks de Dados com Filtro
+	// --- Filtro de status ---
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>('TODAS')
 
+	// --- Parâmetros da URL ---
+	const searchParams = useSearchParams()
+
+	// --- Campo de busca (inicializa com o valor da URL apenas uma vez) ---
+	const [searchTerm, setSearchTerm] = useState(
+		() => searchParams.get('search') || ''
+	)
+
+	// --- Hooks de dados ---
 	const {
 		data: internacoes,
 		isLoading,
 		isError,
 		error,
-	} = useGetInternacoes({ status: statusFilter }) // <--- Conectado ao estado
+	} = useGetInternacoes({ status: statusFilter })
 
-	// Hooks de Mutação
+	// --- Hooks de mutação ---
 	const { mutate: darAlta, isPending: isDandoAlta } = useDarAltaInternacao()
 	const { mutate: deleteInternacao, isPending: isDeleting } =
 		useDeleteInternacao()
 
-	// 5. (ATUALIZADO) Estados de UI (incluindo Evolução)
+	// --- Estados de UI ---
 	const [isCreateOpen, setCreateOpen] = useState(false)
 	const [isEditOpen, setIsEditOpen] = useState(false)
 	const [isAltaOpen, setIsAltaOpen] = useState(false)
 	const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-	const [isEvolucaoOpen, setIsEvolucaoOpen] = useState(false) // <--- NOVO
-
+	const [isEvolucaoOpen, setIsEvolucaoOpen] = useState(false)
+	const [isActionsOpen, setIsActionsOpen] = useState(false)
 	const [selectedInternacao, setSelectedInternacao] =
 		useState<InternacaoComRelacoes | null>(null)
 
-	// 6. (ATUALIZADO) Funções de Ação
-	const handleOpenEdit = (internacao: InternacaoComRelacoes) => {
+	// --- Funções auxiliares ---
+	const handleOpenActions = (internacao: InternacaoComRelacoes) => {
 		setSelectedInternacao(internacao)
-		setIsEditOpen(true)
+		setIsActionsOpen(true)
 	}
-
-	const handleOpenAlta = (internacao: InternacaoComRelacoes) => {
-		setSelectedInternacao(internacao)
-		setIsAltaOpen(true)
-	}
-
-	const handleOpenDelete = (internacao: InternacaoComRelacoes) => {
-		setSelectedInternacao(internacao)
-		setIsDeleteOpen(true)
-	}
-
-	const handleOpenEvolucao = (internacao: InternacaoComRelacoes) => {
-		setSelectedInternacao(internacao)
+	const handleOpenEvolucao = () => {
+		setIsActionsOpen(false)
 		setIsEvolucaoOpen(true)
 	}
-
-	// Função para fechar e limpar todos os modais
+	const handleOpenEdit = () => {
+		setIsActionsOpen(false)
+		setIsEditOpen(true)
+	}
+	const handleOpenAlta = () => {
+		setIsActionsOpen(false)
+		setIsAltaOpen(true)
+	}
+	const handleOpenDelete = () => {
+		setIsActionsOpen(false)
+		setIsDeleteOpen(true)
+	}
 	const handleCloseDialogs = () => {
 		setSelectedInternacao(null)
+		setIsActionsOpen(false)
 		setIsEditOpen(false)
 		setIsAltaOpen(false)
 		setIsDeleteOpen(false)
-		setIsEvolucaoOpen(false) // <--- ATUALIZADO
+		setIsEvolucaoOpen(false)
 	}
-
-	// Handlers de Confirmação
 	const handleConfirmarAlta = () => {
 		if (selectedInternacao) {
-			darAlta(selectedInternacao.id, {
-				onSuccess: handleCloseDialogs,
-			})
+			darAlta(selectedInternacao.id, { onSuccess: handleCloseDialogs })
 		}
 	}
-
 	const handleConfirmarDelete = () => {
 		if (selectedInternacao) {
-			deleteInternacao(selectedInternacao.id, {
-				onSuccess: handleCloseDialogs,
-			})
+			deleteInternacao(selectedInternacao.id, { onSuccess: handleCloseDialogs })
 		}
 	}
-
-	// Helper para formatar datas (Mantendo sua versão)
 	const formatData = (dateString: string) => {
+		if (!dateString) return 'N/A'
 		return new Date(dateString).toLocaleDateString('pt-BR', {
 			timeZone: 'UTC',
 			day: '2-digit',
@@ -141,28 +151,46 @@ export default function InternacoesPage() {
 			minute: '2-digit',
 		})
 	}
-
-	// Helper para Título Dinâmico
 	const getTitulo = () => {
 		if (statusFilter === 'ATIVA') return 'Internações Ativas'
 		if (statusFilter === 'ALTA') return 'Internações com Alta'
 		return 'Todas Internações'
 	}
 
-	// Renderização (Loading / Erro)
+	// --- Filtro client-side ---
+	const filteredInternacoes = useMemo(() => {
+		if (!internacoes) return []
+		if (searchTerm.trim() === '') return internacoes
+		return internacoes.filter((internacao) =>
+			internacao.paciente.nome.toLowerCase().includes(searchTerm.toLowerCase())
+		)
+	}, [internacoes, searchTerm])
+
+	// --- Estados de carregamento e erro ---
 	if (isLoading) {
 		return <AppLoader />
 	}
 
 	if (isError) {
-		// ... (bloco de erro sem alteração)
+		return (
+			<div className="flex flex-1 items-center justify-center p-6">
+				<Alert
+					variant="destructive"
+					className="max-w-md"
+				>
+					<AlertTriangle className="h-4 w-4" />
+					<AlertTitle>Erro ao carregar internações</AlertTitle>
+					<AlertDescription>{error?.message}</AlertDescription>
+				</Alert>
+			</div>
+		)
 	}
 
-	// 4. Renderização (Sucesso)
+	// --- Renderização principal ---
 	return (
 		<>
 			<div className="flex flex-1 flex-col">
-				{/* --- Header --- */}
+				{/* Header */}
 				<div className="flex items-center justify-between p-6">
 					<Button
 						variant="ghost"
@@ -183,7 +211,7 @@ export default function InternacoesPage() {
 					</Button>
 				</div>
 
-				{/* 7. (NOVO) Filtros de Status */}
+				{/* Filtros */}
 				<div className="px-6 pb-4">
 					<RadioGroup
 						value={statusFilter}
@@ -209,148 +237,172 @@ export default function InternacoesPage() {
 								value="ALTA"
 								id="r-alta"
 							/>
-							<Label htmlFor="r-alta">Com Alta</Label>
+							<Label htmlFor="r-alta">Alta</Label>
 						</div>
 					</RadioGroup>
 				</div>
 
-				{/* --- Lista de Internações (ATUALIZADA) --- */}
+				{/* Barra de pesquisa */}
+				<div className="px-6 pb-4">
+					<Input
+						placeholder="Buscar pelo nome do paciente..."
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+					/>
+				</div>
+
+				{/* Lista de internações */}
 				<div className="flex-1 space-y-4 px-6 pb-6">
-					{internacoes && internacoes.length === 0 && (
+					{filteredInternacoes.length === 0 ? (
 						<div className="flex flex-1 flex-col items-center justify-center rounded-md border border-dashed p-8 text-center">
 							<p className="text-muted-foreground">
-								Nenhuma internação
-								{statusFilter !== 'TODAS' &&
-									` ${statusFilter.toLowerCase()}`}{' '}
-								encontrada.
+								{searchTerm ? (
+									<>
+										Nenhuma internação encontrada para <b>{searchTerm}</b>
+										{statusFilter !== 'TODAS' && ` com status ${statusFilter}`}.
+									</>
+								) : (
+									<>
+										Nenhuma internação
+										{statusFilter !== 'TODAS' &&
+											` ${statusFilter.toLowerCase()}`}{' '}
+										encontrada.
+									</>
+								)}
 							</p>
 						</div>
-					)}
-
-					{internacoes &&
-						internacoes.map((internacao) => (
-							<Card key={internacao.id}>
+					) : (
+						filteredInternacoes.map((internacao) => (
+							<Card
+								key={internacao.id}
+								className="cursor-pointer transition-colors hover:bg-muted/50"
+								onClick={() => handleOpenActions(internacao)}
+							>
 								<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 									<div>
 										<CardTitle className="text-lg font-medium">
 											{internacao.paciente.nome}
 										</CardTitle>
-										<CardDescription className="text-md">
-											{internacao.diagnostico || '-'}
+										<CardDescription className="text-sm">
+											<p>
+												<span className="font-medium">Diagnóstico:</span>{' '}
+												{internacao.diagnostico || 'Sem diagnóstico'}
+											</p>
+											<p>
+												<span className="font-medium">Observações:</span>{' '}
+												{internacao.observacoes || 'Sem observações'}
+											</p>
 										</CardDescription>
 									</div>
-									{/* 8. (NOVO) Badge de Status */}
 									<Badge
-										variant={
-											internacao.status === 'ALTA' ? 'secondary' : 'default'
-										}
-										className={
-											internacao.status === 'ATIVA'
-												? 'bg-green-600 text-white' // Verde para ATIVA
-												: ''
-										}
+										variant="default"
+										className={cn(
+											internacao.status === 'ALTA' && 'bg-green-600 text-white',
+											internacao.status === 'ATIVA' && 'bg-blue-600 text-white'
+										)}
 									>
 										{internacao.status}
 									</Badge>
 								</CardHeader>
-
-								{/* 9. (ATUALIZADO) CardContent com ações condicionais */}
-								<CardContent className="space-y-2">
-									<div className="flex justify-between items-start">
-										{/* Informações da Internação */}
-										<div className="space-y-2">
-											<div className="flex flex-wrap gap-2">
-												<Badge variant="secondary">
-													Quarto: {internacao.quarto || 'N/A'}
-												</Badge>
-												<Badge variant="secondary">
-													Leito: {internacao.leito || 'N/A'}
-												</Badge>
-											</div>
-											<p className="text-sm text-muted-foreground">
-												Entrada: {formatData(internacao.dataInicio)}
-											</p>
-											{internacao.dataAlta && (
-												<p className="text-sm text-muted-foreground">
-													Alta: {formatData(internacao.dataAlta)}
-												</p>
-											)}
-											<p className="text-sm text-muted-foreground">
-												Resp:{' '}
-												{internacao.profissionalResponsavel?.nome || 'N/A'}
-											</p>
+								<CardContent className="space-y-1 flex flex-row items-center justify-between">
+									<div className="space-y-2">
+										<div className="flex flex-wrap gap-2">
+											<Badge variant="secondary">
+												Quarto: {internacao.quarto || 'N/A'}
+											</Badge>
+											<Badge variant="secondary">
+												Leito: {internacao.leito || 'N/A'}
+											</Badge>
 										</div>
-
-										{/* Botões de Ação */}
-										<div className="flex flex-col sm:flex-row gap-1">
-											{/* SÓ APARECE SE ATIVA */}
-											{internacao.status === 'ATIVA' && (
-												<>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="text-green-600 hover:text-green-700"
-														onClick={(e) => {
-															e.stopPropagation()
-															handleOpenEvolucao(internacao)
-														}}
-													>
-														<FilePlus className="h-5 w-5" />
-														<span className="sr-only">Adicionar Evolução</span>
-													</Button>
-													<Button
-														variant="ghost"
-														size="icon"
-														onClick={(e) => {
-															e.stopPropagation()
-															handleOpenEdit(internacao)
-														}}
-													>
-														<Edit className="h-5 w-5" />
-														<span className="sr-only">Editar</span>
-													</Button>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="text-blue-600 hover:text-blue-700"
-														onClick={(e) => {
-															e.stopPropagation()
-															handleOpenAlta(internacao)
-														}}
-													>
-														<LogOut className="h-5 w-5" />
-														<span className="sr-only">Dar Alta</span>
-													</Button>
-												</>
-											)}
-
-											{/* Botão de Excluir (sempre aparece) */}
-											<Button
-												variant="ghost"
-												size="icon"
-												className="text-destructive hover:text-destructive"
-												onClick={(e) => {
-													e.stopPropagation()
-													handleOpenDelete(internacao)
-												}}
-											>
-												<Trash2 className="h-5 w-5" />
-												<span className="sr-only">Excluir</span>
-											</Button>
-										</div>
+										<p className="text-sm text-muted-foreground">
+											Entrada: {formatData(internacao.dataInicio)}
+										</p>
+										{internacao.dataAlta && (
+											<p className="text-sm text-muted-foreground">
+												Alta: {formatData(internacao.dataAlta)}
+											</p>
+										)}
+										<p className="text-sm text-muted-foreground">
+											Responsável:{' '}
+											{internacao.profissionalResponsavel?.nome || 'N/A'}
+										</p>
 									</div>
+									<SquareMousePointer className="text-muted-foreground" />
 								</CardContent>
 							</Card>
-						))}
+						))
+					)}
 				</div>
 			</div>
 
-			{/* --- Dialogs e Alerts --- */}
-
+			{/* Dialogs e Alerts */}
 			<CreateInternacaoDialog
 				open={isCreateOpen}
 				onOpenChange={setCreateOpen}
 			/>
+
+			<Dialog
+				open={isActionsOpen}
+				onOpenChange={handleCloseDialogs}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>{selectedInternacao?.paciente.nome}</DialogTitle>
+						<DialogDescription>
+							{selectedInternacao?.diagnostico ||
+								'Selecione uma ação para esta internação.'}
+						</DialogDescription>
+					</DialogHeader>
+					<div className="grid grid-cols-1 gap-4 py-4">
+						<Button
+							variant="outline"
+							asChild
+						>
+							<Link
+								href={`/profissional/internacoes/${selectedInternacao?.id}`}
+							>
+								<ClipboardList className="mr-2 h-4 w-4" />
+								Ver Detalhes e Evoluções
+							</Link>
+						</Button>
+						{selectedInternacao?.status === 'ATIVA' && (
+							<>
+								<Button
+									variant="default"
+									onClick={handleOpenEdit}
+								>
+									<Edit className="mr-2 h-4 w-4" />
+									Editar Dados
+								</Button>
+								<Button
+									variant="default"
+									className="bg-green-600 hover:bg-green-700 focus:bg-green-700 text-white"
+									onClick={handleOpenEvolucao}
+								>
+									<FilePlus className="mr-2 h-4 w-4" />
+									Adicionar Evolução
+								</Button>
+								<Button
+									variant="default"
+									className="bg-blue-600 hover:bg-blue-700 focus:bg-blue-700 text-white"
+									onClick={handleOpenAlta}
+								>
+									<LogOut className="mr-2 h-4 w-4" />
+									Dar Alta
+								</Button>
+							</>
+						)}
+						<Button
+							variant="default"
+							onClick={handleOpenDelete}
+							className="bg-red-600 hover:bg-red-700 focus:bg-red-700 text-white"
+						>
+							<Trash2 className="mr-2 h-4 w-4" />
+							Excluir Internação
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 
 			<EditInternacaoDialog
 				open={isEditOpen}
@@ -358,7 +410,6 @@ export default function InternacoesPage() {
 				internacaoId={selectedInternacao?.id || null}
 			/>
 
-			{/* 10. (NOVO) Dialog de Evolução */}
 			<CreateEvolucaoDialog
 				open={isEvolucaoOpen}
 				onOpenChange={handleCloseDialogs}
@@ -374,19 +425,7 @@ export default function InternacoesPage() {
 					<AlertDialogHeader>
 						<AlertDialogTitle>Confirmar Alta?</AlertDialogTitle>
 						<AlertDialogDescription>
-							<div>
-								<p>
-									Esta ação <b>finalizará</b> a internação do paciente{' '}
-									<b>{selectedInternacao?.paciente.nome}</b>.{' '}
-									<p>
-										O status será alterado para <b>ALTA</b>, e não será mais
-										possível adicionar evoluções ou associações.
-									</p>
-									<p>
-										Familiares associados receberão um e-mail de notificação.
-									</p>
-								</p>
-							</div>
+							Você tem certeza que deseja dar alta a este paciente?
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -396,7 +435,7 @@ export default function InternacoesPage() {
 						<AlertDialogAction
 							onClick={handleConfirmarAlta}
 							disabled={isDandoAlta}
-							className="bg-blue-600 hover:bg-blue-700"
+							className="bg-blue-600 hover:bg-blue-700 text-white"
 						>
 							{isDandoAlta ? 'Registrando...' : 'Sim, dar alta'}
 						</AlertDialogAction>
@@ -412,17 +451,8 @@ export default function InternacoesPage() {
 					<AlertDialogHeader>
 						<AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
 						<AlertDialogDescription>
-							<div>
-								<p>
-									Esta ação <b>excluirá</b> a internação do paciente{' '}
-									<b>{selectedInternacao?.paciente.nome}</b>.{' '}
-								</p>
-
-								<p>
-									Isso excluirá permanentemente a internação e todo o seu
-									histórico (evoluções, associações).
-								</p>
-							</div>
+							Essa ação é irreversível e removerá todos os dados relacionados a
+							esta internação.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -432,7 +462,7 @@ export default function InternacoesPage() {
 						<AlertDialogAction
 							onClick={handleConfirmarDelete}
 							disabled={isDeleting}
-							className="bg-red-500 hover:bg-red-600"
+							className="bg-red-500 hover:bg-red-600 focus:bg-red-600 text-white"
 						>
 							{isDeleting ? 'Excluindo...' : 'Sim, excluir'}
 						</AlertDialogAction>

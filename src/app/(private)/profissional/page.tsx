@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Users, BedDouble, Mail, LogOut } from 'lucide-react'
 
@@ -27,9 +26,10 @@ export default function ProfissionalDashboardPage() {
 				<p className="text-muted-foreground">O que gostaria de fazer hoje?</p>
 			</div>
 
-			{/* Grid de Ações */}
+			{/* [MUDANÇA] Grid de Ações agora é uma Lista Vertical */}
 			<div className="flex-1 p-6 pt-0">
-				<div className="grid grid-cols-2 gap-4">
+				{/* Trocado grid grid-cols-2 gap-4 por flex flex-col gap-3 */}
+				<div className="flex flex-col gap-3">
 					<MenuButton
 						href="/profissional/pacientes"
 						icon={Users}
@@ -50,25 +50,21 @@ export default function ProfissionalDashboardPage() {
 						label="Associações"
 						description="Revisar solicitações"
 					/>
-				</div>
-			</div>
 
-			{/* Botão de Sair */}
-			<div className="p-6 pt-0">
-				<Button
-					variant="outline"
-					className="w-full"
-					onClick={handleLogout}
-				>
-					<LogOut className="mr-2 h-4 w-4" />
-					Sair
-				</Button>
+					<MenuAction
+						onClick={handleLogout}
+						icon={LogOut}
+						label="Sair"
+						description="Encerrar sua sessão"
+					/>
+				</div>
 			</div>
 		</div>
 	)
 }
 
-// Componente de Item de Menu
+// --- Componentes de Item de Menu (Atualizados para Lista) ---
+
 interface MenuButtonProps {
 	href: string
 	icon: React.ElementType
@@ -81,13 +77,47 @@ function MenuButton({ href, icon: Icon, label, description }: MenuButtonProps) {
 		<Link
 			href={href}
 			passHref
-			className="h-full"
 		>
-			<Card className="flex h-full flex-col justify-center p-4 transition-colors hover:bg-muted/50">
-				<Icon className="mb-2 h-7 w-7 text-primary" />
-				<p className="text-base font-semibold">{label}</p>
-				<p className="text-xs text-muted-foreground">{description}</p>
+			{/* [MUDANÇA] Layout interno agora é flex-row (horizontal) */}
+			<Card className="flex flex-row items-center gap-4 p-4 transition-colors hover:bg-muted/50">
+				<Icon className="h-7 w-7 text-primary" />
+				{/* Adicionado um div para agrupar o texto verticalmente */}
+				<div>
+					<p className="text-base font-semibold">{label}</p>
+					<p className="text-xs text-muted-foreground">{description}</p>
+				</div>
 			</Card>
 		</Link>
+	)
+}
+
+interface MenuActionProps {
+	onClick: () => void
+	icon: React.ElementType
+	label: string
+	description: string
+}
+
+function MenuAction({
+	onClick,
+	icon: Icon,
+	label,
+	description,
+}: MenuActionProps) {
+	return (
+		<button
+			onClick={onClick}
+			className="w-full text-left"
+		>
+			{/* [MUDANÇA] Layout interno agora é flex-row (horizontal) */}
+			<Card className="flex flex-row items-center gap-4 p-4 transition-colors hover:bg-muted/50">
+				<Icon className="h-7 w-7 text-destructive" />
+				{/* Adicionado um div para agrupar o texto verticalmente */}
+				<div>
+					<p className="text-base font-semibold">{label}</p>
+					<p className="text-xs text-muted-foreground">{description}</p>
+				</div>
+			</Card>
+		</button>
 	)
 }

@@ -1,4 +1,5 @@
 // Salve em: app/(private)/profissional/pacientes/page.tsx
+// (Versão REATORADA com o Link de Pesquisa CORRETO)
 'use client'
 
 import { useState } from 'react'
@@ -18,6 +19,13 @@ import { EditPacienteDialog } from '@/components/EditPacienteDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog'
+import {
 	AlertDialog,
 	AlertDialogAction,
 	AlertDialogCancel,
@@ -32,9 +40,10 @@ import {
 	ArrowLeft,
 	UserPlus,
 	AlertTriangle,
-	User,
 	Edit,
 	Trash2,
+	BedDouble,
+	SquareMousePointer, // Ícone para "Internações"
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
@@ -43,45 +52,49 @@ export default function PacientesPage() {
 	const { data: pacientes, isLoading, isError, error } = usePacientes()
 	const { mutate: deletePaciente, isPending: isDeleting } = useDeletePaciente()
 
-	// 2. Estados de UI (Gerenciamento dos Modais)
+	// 2. Estados de UI
 	const [isCreateOpen, setCreateOpen] = useState(false)
 	const [isEditOpen, setIsEditOpen] = useState(false)
-	const [isDeleteOpen, setDeleteOpen] = useState(false)
+	const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+	const [isActionsOpen, setIsActionsOpen] = useState(false)
 
-	// O 'selectedPaciente' agora é setado no momento do clique no botão de ação
 	const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(
 		null
 	)
 
-	// 3. Funções de Ação (Simplificadas)
-	const handleCloseActions = () => {
-		setSelectedPaciente(null)
+	// 3. Funções de Ação
+	const handleOpenActions = (paciente: Paciente) => {
+		setSelectedPaciente(paciente)
+		setIsActionsOpen(true)
 	}
 
-	// [NOVO] Handler para abrir o Dialog de Edição
-	const handleOpenEdit = (paciente: Paciente) => {
-		setSelectedPaciente(paciente)
+	const handleCloseDialogs = () => {
+		setSelectedPaciente(null)
+		setIsActionsOpen(false)
+		setIsEditOpen(false)
+		setIsDeleteOpen(false)
+	}
+
+	const handleOpenEdit = () => {
+		setIsActionsOpen(false)
 		setIsEditOpen(true)
 	}
 
-	// [NOVO] Handler para abrir o Dialog de Exclusão
-	const handleOpenDelete = (paciente: Paciente) => {
-		setSelectedPaciente(paciente)
-		setDeleteOpen(true)
+	const handleOpenDelete = () => {
+		setIsActionsOpen(false)
+		setIsDeleteOpen(true)
 	}
 
 	const handleDelete = () => {
 		if (selectedPaciente) {
 			deletePaciente(selectedPaciente.id, {
 				onSuccess: () => {
-					setDeleteOpen(false)
-					handleCloseActions()
+					handleCloseDialogs()
 				},
 			})
 		}
 	}
 
-	// Helper para formatar data
 	const formatData = (dateString: string) => {
 		return new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
 	}
@@ -143,7 +156,11 @@ export default function PacientesPage() {
 
 					{pacientes &&
 						pacientes.map((paciente) => (
-							<Card key={paciente.id}>
+							<Card
+								key={paciente.id}
+								className="cursor-pointer transition-colors hover:bg-muted/50"
+								onClick={() => handleOpenActions(paciente)}
+							>
 								<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 									<CardTitle className="text-lg font-medium">
 										{paciente.nome}
@@ -152,7 +169,7 @@ export default function PacientesPage() {
 										ID: {paciente.id}
 									</Badge>
 								</CardHeader>
-								<CardContent className="space-y-1 flex justify-between items-center">
+								<CardContent className="space-y-1 flex flex-row items-center justify-between">
 									<div>
 										<p className="text-sm text-muted-foreground">
 											CPF: {paciente.cpf}
@@ -167,27 +184,7 @@ export default function PacientesPage() {
 											Sangue: {paciente.tipoSanguineo || 'N/A'}
 										</p>
 									</div>
-
-									<div className="flex gap-4">
-										<Button
-											variant="ghost"
-											size="icon"
-											onClick={() => handleOpenEdit(paciente)}
-										>
-											<Edit />
-											<span className="sr-only">Editar</span>
-										</Button>
-										<Button
-											variant="ghost"
-											size="icon"
-											className="text-destructive hover:text-destructive"
-											onClick={() => handleOpenDelete(paciente)}
-										>
-											<Trash2 />
-											<span className="sr-only">Excluir</span>
-										</Button>
-									</div>
-									{/* --- Fim dos Botões de Ação --- */}
+									<SquareMousePointer className="text-muted-foreground" />
 								</CardContent>
 							</Card>
 						))}
@@ -202,30 +199,79 @@ export default function PacientesPage() {
 				onOpenChange={setCreateOpen}
 			/>
 
-			{/* 2. [REMOVIDO] O Dialog de Ações não é mais necessário */}
+			{/* 2. (ATUALIZADO) Dialog de Ações */}
+			<Dialog
+				open={isActionsOpen}
+				onOpenChange={handleCloseDialogs}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>{selectedPaciente?.nome}</DialogTitle>
+						<DialogDescription>
+							Selecione uma ação para este paciente.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="grid grid-cols-1 gap-4 py-4">
+						{/* ========================================================== */}
+						{/* (A CORREÇÃO ESTÁ AQUI)                                   */}
+						{/* Aponta para /internacoes e passa o nome como 'search'     */}
+						{/* ========================================================== */}
+						<Button
+							variant="outline"
+							asChild
+						>
+							<Link
+								href={`/profissional/internacoes?search=${encodeURIComponent(
+									selectedPaciente?.nome || ''
+								)}`}
+							>
+								<BedDouble className="mr-2 h-4 w-4" />
+								Ver Histórico de Internações
+							</Link>
+						</Button>
+						{/* ========================================================== */}
+
+						{/* (CORREÇÃO DE ESTILO) Usando 'outline' para consistência */}
+						<Button
+							variant="default"
+							onClick={handleOpenEdit}
+						>
+							<Edit className="mr-2 h-4 w-4" />
+							Editar Dados
+						</Button>
+
+						{/* (CORREÇÃO DE ESTILO) Usando 'destructive' para consistência */}
+						<Button
+							variant="default"
+							onClick={handleOpenDelete}
+							className="bg-red-500 hover:bg-red-600 focus:bg-red-600 text-white"
+						>
+							<Trash2 className="mr-2 h-4 w-4" />
+							Excluir Paciente
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 
 			{/* 3. Dialog de Confirmação de Exclusão */}
 			<AlertDialog
 				open={isDeleteOpen}
-				onOpenChange={(isOpen) => {
-					setDeleteOpen(isOpen)
-					if (!isOpen) {
-						handleCloseActions()
-					}
-				}}
+				onOpenChange={handleCloseDialogs}
 			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
 						<AlertDialogDescription>
-							<p>
-								Esta ação <b>não pode</b> ser desfeita.
-							</p>
-							<p>
-								Isso excluirá permanentemente o paciente{' '}
-								<b>{selectedPaciente?.nome}</b> e todo o seu histórico
-								(internações, evoluções).
-							</p>
+							<div className="flex flex-col gap-2">
+								<span>
+									Esta ação <b>não pode</b> ser desfeita.
+								</span>
+								<span>
+									Isso excluirá permanentemente o paciente{' '}
+									<b>{selectedPaciente?.nome}</b> e todo o seu histórico
+									(internações, evoluções).
+								</span>
+							</div>
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -235,6 +281,7 @@ export default function PacientesPage() {
 						<AlertDialogAction
 							onClick={handleDelete}
 							disabled={isDeleting}
+							className="bg-red-500 hover:bg-red-600 focus:bg-red-600 text-white"
 						>
 							{isDeleting ? 'Excluindo...' : 'Sim, excluir'}
 						</AlertDialogAction>
@@ -246,12 +293,7 @@ export default function PacientesPage() {
 			<EditPacienteDialog
 				open={isEditOpen}
 				pacienteId={selectedPaciente?.id || null}
-				onOpenChange={(isOpen) => {
-					setIsEditOpen(isOpen)
-					if (!isOpen) {
-						handleCloseActions() // Reseta o paciente selecionado
-					}
-				}}
+				onOpenChange={handleCloseDialogs}
 			/>
 		</>
 	)

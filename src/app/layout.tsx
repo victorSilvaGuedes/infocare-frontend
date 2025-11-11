@@ -8,7 +8,6 @@ import Providers from './providers'
 // 1. Importe o Toaster do Sonner (estilizado pelo Shadcn)
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/theme-provider'
-import { ModeToggle } from '@/components/toggleTheme'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 

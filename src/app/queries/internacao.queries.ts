@@ -1,5 +1,5 @@
 // Salve como: app/queries/internacao.queries.ts
-// (Versão corrigida com dataInicio)
+// (Versão ATUALIZADA com Tipos de Detalhes)
 
 'use client'
 
@@ -7,6 +7,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { AxiosError } from 'axios'
 import api from '@/lib/api'
 import { toast } from 'sonner'
+// 1. (NOVO) Importar o tipo Evolucao do outro ficheiro
+import { Evolucao } from './evolucao.queries'
 
 // --- Definições de Tipos (Baseadas no Backend) ---
 
@@ -16,12 +18,7 @@ export type Internacao = {
 	id: number
 	idPaciente: number
 	idProfissionalResponsavel: number | null
-
-	// ==========================================================
-	// CORREÇÃO AQUI
-	dataInicio: string // ISO String (Estava dataEntrada)
-	// ==========================================================
-
+	dataInicio: string // ISO String
 	dataAlta: string | null // ISO String
 	status: StatusInternacao
 	diagnostico: string | null
@@ -41,6 +38,21 @@ export type InternacaoComRelacoes = Internacao & {
 	} | null
 }
 
+// 2. (NOVO) Tipo para a Evolução com dados do Profissional
+// (Baseado no 'include' do seu backend GET /internacoes/:id)
+export type EvolucaoComProfissional = Evolucao & {
+	profissional: {
+		nome: string
+		tipo: string
+	}
+}
+
+// 3. (NOVO) Tipo para os Detalhes Completos da Internação
+export type InternacaoDetails = InternacaoComRelacoes & {
+	evolucoes: EvolucaoComProfissional[]
+	// (Pode adicionar 'paciente: Paciente' se o backend o enviar completo)
+}
+
 export type CreateInternacaoDTO = {
 	idPaciente: number
 	idProfissionalResponsavel?: number
@@ -56,12 +68,22 @@ type ApiErrorResponse = {
 	errors?: Array<{ campo: string; mensagem: string }>
 }
 
+export type UpdateInternacaoDTO = {
+	idProfissionalResponsavel?: number | null
+	diagnostico?: string | null
+	observacoes?: string | null
+	quarto?: string | null
+	leito?: string | null
+}
+
+export type UpdateInternacaoData = UpdateInternacaoDTO & { id: number }
+
 // --- Hooks de Query (TanStack Query) ---
 
+// (Hook GET /internacoes - Listagem - Sem alteração)
 type GetInternacoesParams = {
 	status?: StatusInternacao | 'TODAS'
 }
-
 const fetchInternacoes = async (
 	params: GetInternacoesParams
 ): Promise<InternacaoComRelacoes[]> => {
@@ -70,26 +92,41 @@ const fetchInternacoes = async (
 	const { data } = await api.get('/internacoes', { params: queryParams })
 	return data
 }
-
 export function useGetInternacoes(params: GetInternacoesParams) {
 	const queryKey = ['internacoes', params]
-
 	return useQuery<InternacaoComRelacoes[], Error>({
 		queryKey: queryKey,
 		queryFn: () => fetchInternacoes(params),
 	})
 }
 
+// 4. --- (ATUALIZADO) Hook GET (Buscar Internação por ID) ---
+const fetchInternacaoById = async (
+	internacaoId: number
+): Promise<InternacaoDetails> => {
+	// <--- ATUALIZADO O TIPO DE RETORNO
+	const { data } = await api.get(`/internacoes/${internacaoId}`)
+	return data
+}
+
+export function useGetInternacaoById(internacaoId: number | null | undefined) {
+	return useQuery<InternacaoDetails, Error>({
+		// <--- ATUALIZADO O TIPO DE RETORNO
+		queryKey: ['internacao', internacaoId],
+		queryFn: () => fetchInternacaoById(internacaoId!),
+		enabled: !!internacaoId,
+	})
+}
+
+// (Hook POST /internacoes - Criar - Sem alteração)
 const createInternacao = async (
 	internacaoData: CreateInternacaoDTO
 ): Promise<Internacao> => {
 	const { data } = await api.post('/internacoes', internacaoData)
 	return data
 }
-
 export function useCreateInternacao() {
 	const queryClient = useQueryClient()
-
 	return useMutation<
 		Internacao,
 		AxiosError<ApiErrorResponse>,
@@ -114,53 +151,20 @@ export function useCreateInternacao() {
 	})
 }
 
-export type UpdateInternacaoDTO = {
-	idProfissionalResponsavel?: number | null
-	diagnostico?: string | null
-	observacoes?: string | null
-	quarto?: string | null
-	leito?: string | null
-}
-
-// (Tipo de dados para a mutação, incluindo o ID)
-export type UpdateInternacaoData = UpdateInternacaoDTO & { id: number }
-
-// --- (NOVO) Hook GET (Buscar Internação por ID) ---
-// (O backend GET /:id retorna dados completos, incluindo evolucoes)
-// (Vamos simplificar o tipo de retorno por enquanto)
-const fetchInternacaoById = async (
-	internacaoId: number
-): Promise<Internacao> => {
-	const { data } = await api.get(`/internacoes/${internacaoId}`)
-	return data
-}
-
-export function useGetInternacaoById(internacaoId: number | null | undefined) {
-	return useQuery<Internacao, Error>({
-		queryKey: ['internacao', internacaoId],
-		queryFn: () => fetchInternacaoById(internacaoId!),
-		enabled: !!internacaoId, // Só executa se internacaoId não for nulo
-	})
-}
-
-// --- (NOVO) Hook PUT (Dar Alta) ---
+// (Hook PUT /:id/alta - Dar Alta - Sem alteração)
 const darAltaInternacao = async (internacaoId: number): Promise<Internacao> => {
 	const { data } = await api.put(`/internacoes/${internacaoId}/alta`)
 	return data
 }
-
 export function useDarAltaInternacao() {
 	const queryClient = useQueryClient()
 	return useMutation<Internacao, AxiosError<ApiErrorResponse>, number>({
 		mutationFn: darAltaInternacao,
 		onSuccess: (internacaoComAlta) => {
-			// Invalida a lista de internações (para remover a 'ATIVA')
 			queryClient.invalidateQueries({ queryKey: ['internacoes'] })
-			// Invalida a query específica desta internação
 			queryClient.invalidateQueries({
 				queryKey: ['internacao', internacaoComAlta.id],
 			})
-
 			toast.success('Alta registrada com sucesso!', {
 				description: 'O paciente recebeu alta e a internação foi finalizada.',
 			})
@@ -174,7 +178,7 @@ export function useDarAltaInternacao() {
 	})
 }
 
-// --- (NOVO) Hook PUT (Atualizar Internação) ---
+// (Hook PUT /:id - Atualizar - Sem alteração)
 const updateInternacao = async ({
 	id,
 	...data
@@ -182,7 +186,6 @@ const updateInternacao = async ({
 	const { data: updatedData } = await api.put(`/internacoes/${id}`, data)
 	return updatedData
 }
-
 export function useUpdateInternacao() {
 	const queryClient = useQueryClient()
 	return useMutation<
@@ -192,9 +195,7 @@ export function useUpdateInternacao() {
 	>({
 		mutationFn: updateInternacao,
 		onSuccess: (internacaoAtualizada) => {
-			// Atualiza a lista
 			queryClient.invalidateQueries({ queryKey: ['internacoes'] })
-			// Atualiza o cache desta internação
 			queryClient.setQueryData(
 				['internacao', internacaoAtualizada.id],
 				internacaoAtualizada
@@ -210,11 +211,10 @@ export function useUpdateInternacao() {
 	})
 }
 
-// --- (NOVO) Hook DELETE (Excluir Internação) ---
+// (Hook DELETE /:id - Excluir - Sem alteração)
 const deleteInternacao = async (internacaoId: number): Promise<void> => {
 	await api.delete(`/internacoes/${internacaoId}`)
 }
-
 export function useDeleteInternacao() {
 	const queryClient = useQueryClient()
 	return useMutation<void, AxiosError<ApiErrorResponse>, number>({
