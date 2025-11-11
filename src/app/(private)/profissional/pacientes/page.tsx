@@ -172,16 +172,19 @@ export default function PacientesPage() {
 								<CardContent className="space-y-1 flex flex-row items-center justify-between">
 									<div>
 										<p className="text-sm text-muted-foreground">
-											CPF: {paciente.cpf}
+											<span className="font-medium">CPF:</span> {paciente.cpf}
 										</p>
 										<p className="text-sm text-muted-foreground">
-											Nascimento: {formatData(paciente.dataNascimento)}
+											<span className="font-medium">Nascimento:</span>{' '}
+											{formatData(paciente.dataNascimento)}
 										</p>
 										<p className="text-sm text-muted-foreground">
-											Tel: {paciente.telefone || 'N/A'}
+											<span className="font-medium">Telefone:</span>{' '}
+											{paciente.telefone || 'N/A'}
 										</p>
 										<p className="text-sm text-muted-foreground">
-											Sangue: {paciente.tipoSanguineo || 'N/A'}
+											<span className="font-medium">Sangue:</span>{' '}
+											{paciente.tipoSanguineo || 'N/A'}
 										</p>
 									</div>
 									<SquareMousePointer className="text-muted-foreground" />

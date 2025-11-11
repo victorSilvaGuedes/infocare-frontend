@@ -104,17 +104,21 @@ export default function InternacaoDetailPage() {
 					<Badge variant="secondary">Leito: {internacao.leito || 'N/A'}</Badge>
 				</div>
 				<div className="text-sm text-muted-foreground">
-					Diagnóstico: {internacao.diagnostico || 'N/A'}
+					<span className="font-medium">Diagnóstico:</span>{' '}
+					{internacao.diagnostico || 'N/A'}
 				</div>
 				<div className="text-sm text-muted-foreground">
-					Observações: {internacao.observacoes || 'N/A'}
+					<span className="font-medium">Observações:</span>{' '}
+					{internacao.observacoes || 'N/A'}
 				</div>
 				<p className="text-sm text-muted-foreground">
-					Entrada: {formatDataHora(internacao.dataInicio)}
+					<span className="font-medium">Entrada:</span>{' '}
+					{formatDataHora(internacao.dataInicio)}
 				</p>
 				{internacao.dataAlta && (
 					<p className="text-sm text-muted-foreground">
-						Alta: {formatDataHora(internacao.dataAlta)}
+						<span className="font-medium">Alta:</span>{' '}
+						{formatDataHora(internacao.dataAlta)}
 					</p>
 				)}
 			</div>

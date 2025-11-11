@@ -315,15 +315,17 @@ export default function InternacoesPage() {
 											</Badge>
 										</div>
 										<p className="text-sm text-muted-foreground">
-											Entrada: {formatData(internacao.dataInicio)}
+											<span className="font-medium">Entrada:</span>{' '}
+											{formatData(internacao.dataInicio)}
 										</p>
 										{internacao.dataAlta && (
 											<p className="text-sm text-muted-foreground">
-												Alta: {formatData(internacao.dataAlta)}
+												<span className="font-medium">Alta:</span>{' '}
+												{formatData(internacao.dataAlta)}
 											</p>
 										)}
 										<p className="text-sm text-muted-foreground">
-											Responsável:{' '}
+											<span className="font-medium">Responsável:</span>{' '}
 											{internacao.profissionalResponsavel?.nome || 'N/A'}
 										</p>
 									</div>

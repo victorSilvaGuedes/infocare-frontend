@@ -1,4 +1,4 @@
-// app/(private)/profissional/pacientes/components/CreatePacienteDialog.tsx
+// Salve como: app/(private)/profissional/pacientes/components/CreatePacienteDialog.tsx
 'use client'
 
 import { z } from 'zod'
@@ -8,7 +8,6 @@ import { useCreatePaciente } from '@/app/queries/pacientes.queries'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
-// [MUDANÇA] Imports do Dialog, substituindo o Drawer
 import {
 	Dialog,
 	DialogContent,
@@ -19,6 +18,14 @@ import {
 } from '@/components/ui/dialog'
 
 import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select'
+
+import {
 	Form,
 	FormControl,
 	FormField,
@@ -26,8 +33,12 @@ import {
 	FormLabel,
 	FormMessage,
 } from '@/components/ui/form'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
-// --- Funções de Máscara (Mantidas) ---
+// Lista de tipos sanguíneos
+const tiposSanguineos = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+
+// Funções de máscara
 const maskCPF = (value: string) => {
 	return value
 		.replace(/\D/g, '')
@@ -45,50 +56,39 @@ const maskTelefone = (value: string) => {
 		.replace(/(\d{4})-(\d)(\d{4})/, '$1$2-$3')
 		.substring(0, 15)
 }
-// --- Fim das Funções de Máscara ---
 
-// Schema Zod (Corrigido e Mantido)
+// Schema de validação com Zod
 const formSchema = z.object({
 	nome: z.string().min(3, { message: 'Nome deve ter no mínimo 3 caracteres.' }),
 	cpf: z
 		.string()
 		.length(14, { message: 'CPF deve estar no formato xxx.xxx.xxx-xx' }),
-
-	// Usamos z.date() com as mensagens de erro corretas
 	dataNascimento: z.date({
 		error: (issue) =>
 			issue.input === undefined
 				? 'Data de nascimento é obrigatória.'
 				: 'Por favor, insira uma data válida.',
 	}),
-
 	telefone: z
 		.string()
 		.optional()
 		.transform((val) => (val === '' ? undefined : val)),
-	tipoSanguineo: z
-		.string()
-		.optional()
-		.transform((val) => (val === '' ? undefined : val)),
+	tipoSanguineo: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
 
-// Props do componente
 interface CreatePacienteDialogProps {
 	open: boolean
 	onOpenChange: (open: boolean) => void
 }
 
-// [MUDANÇA] Renomeado para CreatePacienteDialog
 export function CreatePacienteDialog({
 	open,
 	onOpenChange,
 }: CreatePacienteDialogProps) {
 	const { mutateAsync: createPaciente, isPending } = useCreatePaciente()
 
-	// [CORREÇÃO] Remova o <FormValues> daqui.
-	// O hook vai inferir o tipo automaticamente do zodResolver.
 	const form = useForm({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
@@ -96,12 +96,10 @@ export function CreatePacienteDialog({
 			cpf: '',
 			dataNascimento: undefined,
 			telefone: '',
-			tipoSanguineo: '',
+			tipoSanguineo: undefined,
 		},
 	})
 
-	// A lógica de Submit (Mantida)
-	// Agora 'data' terá o tipo correto inferido do schema
 	const onSubmit = async (data: FormValues) => {
 		try {
 			await createPaciente(data)
@@ -111,22 +109,17 @@ export function CreatePacienteDialog({
 		}
 	}
 
-	// Lógica de Fechar/Reset (Mantida)
 	const handleOpenChange = (isOpen: boolean) => {
 		onOpenChange(isOpen)
-		if (!isOpen) {
-			form.reset()
-		}
+		if (!isOpen) form.reset()
 	}
 
 	return (
-		// [MUDANÇA] Trocado Drawer por Dialog
 		<Dialog
 			open={open}
 			onOpenChange={handleOpenChange}
 		>
 			<DialogContent className="sm:max-w-[425px]">
-				{/* O <Form> e <form> envolvem o conteúdo para o submit do footer funcionar */}
 				<Form {...form}>
 					<form onSubmit={form.handleSubmit(onSubmit)}>
 						<DialogHeader>
@@ -136,8 +129,8 @@ export function CreatePacienteDialog({
 							</DialogDescription>
 						</DialogHeader>
 
-						{/* Div para o conteúdo do formulário com espaçamento e padding */}
 						<div className="space-y-4 py-4">
+							{/* Nome */}
 							<FormField
 								control={form.control}
 								name="nome"
@@ -155,6 +148,8 @@ export function CreatePacienteDialog({
 									</FormItem>
 								)}
 							/>
+
+							{/* CPF */}
 							<FormField
 								control={form.control}
 								name="cpf"
@@ -176,7 +171,7 @@ export function CreatePacienteDialog({
 								)}
 							/>
 
-							{/* Input de data nativo (mantido da sua versão) */}
+							{/* Data de nascimento */}
 							<FormField
 								control={form.control}
 								name="dataNascimento"
@@ -186,14 +181,11 @@ export function CreatePacienteDialog({
 										<FormControl>
 											<Input
 												type="date"
-												{...field}
-												// Converte o valor de Date para string (yyyy-mm-dd)
 												value={
 													field.value
 														? field.value.toISOString().split('T')[0]
 														: ''
 												}
-												// Converte a string (yyyy-mm-dd) de volta para Date
 												onChange={(e) => field.onChange(e.target.valueAsDate)}
 												disabled={isPending}
 												className="block w-full"
@@ -204,6 +196,7 @@ export function CreatePacienteDialog({
 								)}
 							/>
 
+							{/* Telefone */}
 							<FormField
 								control={form.control}
 								name="telefone"
@@ -224,26 +217,49 @@ export function CreatePacienteDialog({
 									</FormItem>
 								)}
 							/>
+
+							{/* Tipo sanguíneo */}
 							<FormField
 								control={form.control}
 								name="tipoSanguineo"
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Tipo Sanguíneo (Opcional)</FormLabel>
-										<FormControl>
-											<Input
-												placeholder="Ex: A+"
-												{...field}
-												disabled={isPending}
-											/>
-										</FormControl>
+										<Select
+											onValueChange={(v) =>
+												field.onChange(v === 'none' ? undefined : v)
+											}
+											value={field.value || ''}
+											disabled={isPending}
+										>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Selecione o tipo" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<ScrollArea className="h-48">
+													<SelectItem value="none">
+														Não sabe / Não informar
+													</SelectItem>
+													{tiposSanguineos.map((tipo) => (
+														<SelectItem
+															key={tipo}
+															value={tipo}
+														>
+															{tipo}
+														</SelectItem>
+													))}
+												</ScrollArea>
+											</SelectContent>
+										</Select>
 										<FormMessage />
 									</FormItem>
 								)}
 							/>
 						</div>
 
-						{/* [MUDANÇA] Footer do Dialog (sem botão de cancelar) */}
+						{/* Footer */}
 						<DialogFooter>
 							<Button
 								type="button"

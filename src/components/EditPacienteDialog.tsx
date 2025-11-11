@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 import {
 	usePacienteById,
 	useUpdatePaciente,
-	CreatePacienteDTO, // Reutilizamos este tipo para o Zod
+	CreatePacienteDTO,
 } from '@/app/queries/pacientes.queries'
 import { AppLoader } from './AppLoader'
 
@@ -45,27 +45,36 @@ import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-// --- [CORREÇÃO] Adicionando as Funções de Máscara ---
+// 1. (NOVO) Imports do Select
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select'
+import { ScrollArea } from '@/components/ui/scroll-area'
+
+// --- Funções de Máscara (Mantidas) ---
 const maskCPF = (value: string) => {
 	return value
-		.replace(/\D/g, '') // Remove tudo que não é dígito
-		.replace(/(\d{3})(\d)/, '$1.$2') // Coloca ponto após o terceiro dígito
-		.replace(/(\d{3})(\d)/, '$1.$2') // Coloca ponto após o sexto dígito
-		.replace(/(\d{3})(\d{1,2})$/, '$1-$2') // Coloca hífen antes dos últimos 2 dígitos
-		.substring(0, 14) // Limita ao tamanho máximo do CPF formatado
+		.replace(/\D/g, '')
+		.replace(/(\d{3})(\d)/, '$1.$2')
+		.replace(/(\d{3})(\d)/, '$1.$2')
+		.replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+		.substring(0, 14)
 }
 
 const maskTelefone = (value: string) => {
 	return value
 		.replace(/\D/g, '')
-		.replace(/(\d{2})(\d)/, '($1) $2') // Coloca parênteses nos dois primeiros dígitos
-		.replace(/(\d{5})(\d)/, '$1-$2') // Coloca hífen após o quinto dígito (para celular)
-		.replace(/(\d{4})-(\d)(\d{4})/, '$1$2-$3') // Ajuste para telefone fixo
-		.substring(0, 15) // Limita ao tamanho máximo (xx) xxxxx-xxxx
+		.replace(/(\d{2})(\d)/, '($1) $2')
+		.replace(/(\d{5})(\d)/, '$1-$2')
+		.replace(/(\d{4})-(\d)(\d{4})/, '$1$2-$3')
+		.substring(0, 15)
 }
-// --- Fim da Correção ---
 
-// 1. Definir o Schema de Validação (baseado no Zod do backend)
+// Schema Zod (Sem alteração)
 const updatePacienteSchema = z.object({
 	nome: z.string().min(3, { message: 'Nome deve ter no mínimo 3 caracteres.' }),
 	cpf: z
@@ -87,10 +96,11 @@ const updatePacienteSchema = z.object({
 		.transform((val) => (val === '' ? undefined : val)),
 })
 
-// O tipo de dados do formulário
 type UpdatePacienteFormValues = z.infer<typeof updatePacienteSchema>
 
-// 2. Definir as Props do Dialog
+// 2. (NOVO) Array de tipos sanguíneos
+const tiposSanguineos = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+
 interface EditPacienteDialogProps {
 	pacienteId: number | null
 	open: boolean
@@ -102,18 +112,15 @@ export function EditPacienteDialog({
 	open,
 	onOpenChange,
 }: EditPacienteDialogProps) {
-	// 3. Buscar os dados do Paciente
+	// ... (Hooks 'usePacienteById' e 'useUpdatePaciente' sem alteração) ...
 	const {
 		data: paciente,
 		isLoading,
 		isError,
 		error,
 	} = usePacienteById(pacienteId)
-
-	// 4. Hook de Mutação (Atualização)
 	const { mutate: updatePaciente, isPending: isUpdating } = useUpdatePaciente()
 
-	// 5. Configuração do Formulário
 	const form = useForm({
 		resolver: zodResolver(updatePacienteSchema),
 		// Valores padrão vazios ou indefinidos
@@ -126,7 +133,7 @@ export function EditPacienteDialog({
 		},
 	})
 
-	// 6. Efeito para pré-popular o formulário
+	// ... (useEffect e onSubmit sem alteração) ...
 	useEffect(() => {
 		if (paciente) {
 			form.reset({
@@ -138,34 +145,26 @@ export function EditPacienteDialog({
 		}
 	}, [paciente, form])
 
-	// 7. Handler de Submissão
 	const onSubmit = (values: UpdatePacienteFormValues) => {
 		if (!pacienteId) return
-
-		// Prepara os dados para a API (CreatePacienteDTO)
-		// Opcionais devem ser 'undefined' se vazios, não string vazia
 		const dataToUpdate: CreatePacienteDTO = {
 			...values,
 			tipoSanguineo: values.tipoSanguineo || undefined,
 			telefone: values.telefone || undefined,
 		}
-
 		updatePaciente(
 			{ id: pacienteId, ...dataToUpdate },
 			{
 				onSuccess: () => {
-					onOpenChange(false) // Fecha o dialog em sucesso
+					onOpenChange(false)
 				},
 			}
 		)
 	}
 
-	// [MUDANÇA] Adicionado handleOpenChange para resetar o form
-	// (Evita que dados antigos apareçam ao reabrir o dialog)
 	const handleOpenChange = (isOpen: boolean) => {
 		onOpenChange(isOpen)
 		if (!isOpen) {
-			// Reseta para os valores padrão (vazios)
 			form.reset({
 				nome: '',
 				cpf: '',
@@ -179,7 +178,7 @@ export function EditPacienteDialog({
 	return (
 		<Dialog
 			open={open}
-			onOpenChange={handleOpenChange} // [MUDANÇA]
+			onOpenChange={handleOpenChange}
 		>
 			<DialogContent className="sm:max-w-[425px]">
 				<DialogHeader>
@@ -189,7 +188,6 @@ export function EditPacienteDialog({
 					</DialogDescription>
 				</DialogHeader>
 
-				{/* 8. Renderização de Loading / Erro DENTRO do dialog */}
 				{isLoading && <AppLoader />}
 
 				{isError && (
@@ -202,13 +200,13 @@ export function EditPacienteDialog({
 					</Alert>
 				)}
 
-				{/* 9. O Formulário (só aparece se tiver dados) */}
 				{paciente && (
 					<Form {...form}>
 						<form
 							onSubmit={form.handleSubmit(onSubmit)}
 							className="space-y-4"
 						>
+							{/* --- Nome (Sem alteração) --- */}
 							<FormField
 								control={form.control}
 								name="nome"
@@ -225,6 +223,7 @@ export function EditPacienteDialog({
 									</FormItem>
 								)}
 							/>
+							{/* --- CPF (Sem alteração) --- */}
 							<FormField
 								control={form.control}
 								name="cpf"
@@ -235,7 +234,6 @@ export function EditPacienteDialog({
 											<Input
 												placeholder="xxx.xxx.xxx-xx"
 												{...field}
-												// [CORREÇÃO] Adicionando a máscara de CPF
 												onChange={(e) =>
 													field.onChange(maskCPF(e.target.value))
 												}
@@ -245,6 +243,7 @@ export function EditPacienteDialog({
 									</FormItem>
 								)}
 							/>
+							{/* --- Data de Nascimento (Sem alteração) --- */}
 							<FormField
 								control={form.control}
 								name="dataNascimento"
@@ -289,6 +288,7 @@ export function EditPacienteDialog({
 									</FormItem>
 								)}
 							/>
+							{/* --- Telefone (Sem alteração) --- */}
 							<FormField
 								control={form.control}
 								name="telefone"
@@ -299,7 +299,6 @@ export function EditPacienteDialog({
 											<Input
 												placeholder="(xx) 9xxxx-xxxx"
 												{...field}
-												// [CORREÇÃO] Adicionando a máscara de Telefone
 												onChange={(e) =>
 													field.onChange(maskTelefone(e.target.value))
 												}
@@ -309,23 +308,47 @@ export function EditPacienteDialog({
 									</FormItem>
 								)}
 							/>
+
+							{/* 3. (ATUALIZADO) Campo Tipo Sanguíneo --- */}
 							<FormField
 								control={form.control}
 								name="tipoSanguineo"
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Tipo Sanguíneo (Opcional)</FormLabel>
-										<FormControl>
-											<Input
-												placeholder="A+"
-												{...field}
-											/>
-										</FormControl>
+										<Select
+											onValueChange={field.onChange}
+											value={field.value || ''} // Garante que o valor é controlado
+											disabled={isUpdating}
+										>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Selecione o tipo" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<ScrollArea className="h-48">
+													{/* Opção para limpar o campo */}
+													<SelectItem value="none">
+														Não sabe / Não informar
+													</SelectItem>
+													{tiposSanguineos.map((tipo) => (
+														<SelectItem
+															key={tipo}
+															value={tipo}
+														>
+															{tipo}
+														</SelectItem>
+													))}
+												</ScrollArea>
+											</SelectContent>
+										</Select>
 										<FormMessage />
 									</FormItem>
 								)}
 							/>
 
+							{/* --- Footer (Sem alteração) --- */}
 							<DialogFooter>
 								<Button
 									type="button"
