@@ -185,7 +185,7 @@ export function CreatePacienteDialog({
 												value={field.value || ''}
 												onChange={(e) => field.onChange(e.target.value)}
 												disabled={isPending}
-												className="w-full"
+												className="block w-full"
 											/>
 										</FormControl>
 										<FormMessage />

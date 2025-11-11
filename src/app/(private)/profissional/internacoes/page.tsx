@@ -68,7 +68,7 @@ type StatusFilter = 'ATIVA' | 'ALTA' | 'TODAS'
 
 export default function InternacoesPage() {
 	// --- Filtro de status ---
-	const [statusFilter, setStatusFilter] = useState<StatusFilter>('TODAS')
+	const [statusFilter, setStatusFilter] = useState<StatusFilter>('ATIVA')
 
 	// --- Parâmetros da URL ---
 	const searchParams = useSearchParams()
@@ -143,7 +143,6 @@ export default function InternacoesPage() {
 	const formatData = (dateString: string) => {
 		if (!dateString) return 'N/A'
 		return new Date(dateString).toLocaleDateString('pt-BR', {
-			timeZone: 'UTC',
 			day: '2-digit',
 			month: '2-digit',
 			year: 'numeric',
@@ -220,13 +219,6 @@ export default function InternacoesPage() {
 					>
 						<div className="flex items-center space-x-2">
 							<RadioGroupItem
-								value="TODAS"
-								id="r-todas"
-							/>
-							<Label htmlFor="r-todas">Todas</Label>
-						</div>
-						<div className="flex items-center space-x-2">
-							<RadioGroupItem
 								value="ATIVA"
 								id="r-ativa"
 							/>
@@ -238,6 +230,13 @@ export default function InternacoesPage() {
 								id="r-alta"
 							/>
 							<Label htmlFor="r-alta">Alta</Label>
+						</div>
+						<div className="flex items-center space-x-2">
+							<RadioGroupItem
+								value="TODAS"
+								id="r-todas"
+							/>
+							<Label htmlFor="r-todas">Todas</Label>
 						</div>
 					</RadioGroup>
 				</div>
@@ -311,7 +310,7 @@ export default function InternacoesPage() {
 												Quarto: {internacao.quarto || 'N/A'}
 											</Badge>
 											<Badge variant="secondary">
-												Leito: {internacao.leito || 'N/A'}
+												Leito: {internacao.leito?.toUpperCase() || 'N/A'}
 											</Badge>
 										</div>
 										<p className="text-sm text-muted-foreground">
@@ -351,8 +350,8 @@ export default function InternacoesPage() {
 					<DialogHeader>
 						<DialogTitle>{selectedInternacao?.paciente.nome}</DialogTitle>
 						<DialogDescription>
-							{selectedInternacao?.diagnostico ||
-								'Selecione uma ação para esta internação.'}
+							<span className="font-medium">Diagnóstico: </span>
+							{selectedInternacao?.diagnostico || 'Sem diagnóstico'}
 						</DialogDescription>
 					</DialogHeader>
 					<div className="grid grid-cols-1 gap-4 py-4">

@@ -29,7 +29,6 @@ export default function InternacaoDetailPage() {
 	// Helper para formatar data e hora
 	const formatDataHora = (dateString: string) => {
 		return new Date(dateString).toLocaleDateString('pt-BR', {
-			timeZone: 'UTC',
 			day: '2-digit',
 			month: '2-digit',
 			year: 'numeric',
@@ -101,7 +100,9 @@ export default function InternacaoDetailPage() {
 					<Badge variant="secondary">
 						Quarto: {internacao.quarto || 'N/A'}
 					</Badge>
-					<Badge variant="secondary">Leito: {internacao.leito || 'N/A'}</Badge>
+					<Badge variant="secondary">
+						Leito: {internacao.leito?.toUpperCase() || 'N/A'}
+					</Badge>
 				</div>
 				<div className="text-sm text-muted-foreground">
 					<span className="font-medium">Diagnóstico:</span>{' '}

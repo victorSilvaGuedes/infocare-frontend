@@ -1,5 +1,5 @@
 // Salve como: app/(private)/profissional/associacoes/page.tsx
-// (Versão CORRIGIDA - usando lowercase enums)
+// (Versão COMPLETA E REATORADA - Botões no Card + Correção de Fuso Horário)
 'use client'
 
 // Imports do React
@@ -23,18 +23,12 @@ import { Button } from '@/components/ui/button'
 import {
 	Card,
 	CardContent,
-	CardDescription,
+	CardFooter, // 1. Importar CardFooter
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from '@/components/ui/dialog'
+// 2. (REMOVIDO) Dialog (não é mais usado para ações)
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -55,7 +49,7 @@ import { cn } from '@/lib/utils'
 type StatusFilter = StatusAssociacao | 'TODAS'
 
 export default function AssociacoesPage() {
-	// --- Filtro de status (Corrigido para 'pendente') ---
+	// --- Filtro de status ---
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>('pendente')
 
 	// --- Hooks de dados ---
@@ -70,29 +64,24 @@ export default function AssociacoesPage() {
 	const { mutate: aprovar, isPending: isAprovando } = useAprovarAssociacao()
 	const { mutate: rejeitar, isPending: isRejeitando } = useRejeitarAssociacao()
 
-	// --- Estados de UI ---
-	const [isActionsOpen, setIsActionsOpen] = useState(false)
+	// --- Estados de UI (Simplificado) ---
 	const [isAprovarOpen, setIsAprovarOpen] = useState(false)
 	const [isRejeitarOpen, setIsRejeitarOpen] = useState(false)
 	const [selectedAssociacao, setSelectedAssociacao] =
 		useState<AssociacaoComRelacoes | null>(null)
 
-	// --- Funções auxiliares ---
-	const handleOpenActions = (associacao: AssociacaoComRelacoes) => {
+	// --- Funções auxiliares (Atualizado) ---
+	const handleOpenAprovar = (associacao: AssociacaoComRelacoes) => {
 		setSelectedAssociacao(associacao)
-		setIsActionsOpen(true)
-	}
-	const handleOpenAprovar = () => {
-		setIsActionsOpen(false)
 		setIsAprovarOpen(true)
 	}
-	const handleOpenRejeitar = () => {
-		setIsActionsOpen(false)
+	const handleOpenRejeitar = (associacao: AssociacaoComRelacoes) => {
+		setSelectedAssociacao(associacao)
 		setIsRejeitarOpen(true)
 	}
+
 	const handleCloseDialogs = () => {
 		setSelectedAssociacao(null)
-		setIsActionsOpen(false)
 		setIsAprovarOpen(false)
 		setIsRejeitarOpen(false)
 	}
@@ -106,10 +95,12 @@ export default function AssociacoesPage() {
 			rejeitar(selectedAssociacao.id, { onSuccess: handleCloseDialogs })
 		}
 	}
+
+	// 3. (CORREÇÃO DE FUSO HORÁRIO)
+	// Removido 'timeZone: 'UTC'' para usar o fuso horário local do navegador
 	const formatData = (dateString: string) => {
 		if (!dateString) return 'N/A'
 		return new Date(dateString).toLocaleDateString('pt-BR', {
-			timeZone: 'UTC',
 			day: '2-digit',
 			month: '2-digit',
 			year: 'numeric',
@@ -123,6 +114,7 @@ export default function AssociacoesPage() {
 		return <AppLoader />
 	}
 
+	// 4. (RESTAURADO) Bloco de Erro
 	if (isError) {
 		return (
 			<div className="flex flex-1 items-center justify-center p-6">
@@ -157,7 +149,7 @@ export default function AssociacoesPage() {
 					<div className="w-9"></div> {/* Espaçador */}
 				</div>
 
-				{/* Filtros (Corrigido para lowercase) */}
+				{/* 5. (RESTAURADO) Filtros */}
 				<div className="px-6 pb-4">
 					<RadioGroup
 						value={statusFilter}
@@ -195,7 +187,7 @@ export default function AssociacoesPage() {
 					</RadioGroup>
 				</div>
 
-				{/* Lista de Solicitações (Corrigido para lowercase) */}
+				{/* 6. (RESTAURADO) Lista de Solicitações */}
 				<div className="flex-1 space-y-4 px-6 pb-6">
 					{associacoes && associacoes.length === 0 ? (
 						<div className="flex flex-1 flex-col items-center justify-center rounded-md border border-dashed p-8 text-center">
@@ -210,8 +202,7 @@ export default function AssociacoesPage() {
 						associacoes?.map((associacao) => (
 							<Card
 								key={associacao.id}
-								className="cursor-pointer transition-colors hover:bg-muted/50"
-								onClick={() => handleOpenActions(associacao)}
+								// (Removido onClick do Card)
 							>
 								<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 									<CardTitle className="text-lg font-medium">
@@ -221,82 +212,74 @@ export default function AssociacoesPage() {
 										variant={
 											associacao.status === 'aprovada'
 												? 'default'
-												: associacao.status === 'rejeitada' // Corrigido
+												: associacao.status === 'rejeitada'
 												? 'destructive'
 												: 'secondary'
 										}
 										className={cn(
-											associacao.status === 'pendente' && // Corrigido
+											associacao.status === 'pendente' &&
 												'bg-yellow-500 text-black',
-											associacao.status === 'aprovada' && // Corrigido
+											associacao.status === 'aprovada' &&
 												'bg-green-600 text-white'
 										)}
 									>
-										{/* Capitaliza a primeira letra apenas para exibição */}
 										{associacao.status.charAt(0).toUpperCase() +
 											associacao.status.slice(1)}
 									</Badge>
 								</CardHeader>
-								<CardContent className="space-y-1">
+								<CardContent className="space-y-1 pb-4">
 									<p className="text-sm font-medium">
 										Paciente: {associacao.internacao.paciente.nome}
 									</p>
 									<p className="text-sm text-muted-foreground">
-										<span className="font-medium">Diagnóstico:</span>{' '}
-										{associacao.internacao.diagnostico || 'N/A'}
+										Diagnóstico: {associacao.internacao.diagnostico || 'N/A'}
 									</p>
 									<p className="text-sm text-muted-foreground">
-										<span className="font-medium">Data da Solicitação:</span>{' '}
+										Data da Solicitação:{' '}
 										{formatData(associacao.dataSolicitacao)}
 									</p>
 								</CardContent>
+
+								{/* 7. (ATUALIZADO) CardFooter com botões */}
+								{associacao.status === 'pendente' && (
+									<CardFooter className="grid grid-cols-2 gap-4">
+										<Button
+											variant="default"
+											onClick={(e) => {
+												e.stopPropagation()
+												handleOpenRejeitar(associacao)
+											}}
+											disabled={isAprovando || isRejeitando}
+											className="bg-red-500 hover:bg-red-600 focus:bg-red-600 text-white"
+										>
+											<X className="mr-1 h-4 w-4" />
+											Rejeitar
+										</Button>
+										<Button
+											variant="default"
+											className="bg-green-600 hover:bg-green-700 text-white"
+											onClick={(e) => {
+												e.stopPropagation()
+												handleOpenAprovar(associacao)
+											}}
+											disabled={isAprovando || isRejeitando}
+										>
+											<Check className="mr-1 h-4 w-4" />
+											Aprovar
+										</Button>
+									</CardFooter>
+								)}
 							</Card>
 						))
 					)}
 				</div>
 			</div>
 
-			{/* --- Dialogs e Alerts (Corrigido) --- */}
+			{/* --- Dialogs e Alerts --- */}
 
-			{/* Dialog de Ações (Aprovar/Rejeitar) */}
-			<Dialog
-				open={isActionsOpen}
-				onOpenChange={handleCloseDialogs}
-			>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>{selectedAssociacao?.familiar.nome}</DialogTitle>
-						<DialogDescription>
-							Solicitação para acompanhar o paciente{' '}
-							<b>{selectedAssociacao?.internacao.paciente.nome}</b>.
-						</DialogDescription>
-					</DialogHeader>
-					{/* Mostra botões apenas se PENDENTE (Corrigido) */}
-					{selectedAssociacao?.status === 'pendente' && (
-						<div className="grid grid-cols-1 gap-4 py-4 sm:grid-cols-2">
-							<Button
-								variant="destructive"
-								onClick={handleOpenRejeitar} // Corrigido
-								disabled={isAprovando || isRejeitando} // Corrigido
-							>
-								<X className="mr-2 h-4 w-4" />
-								Rejeitar
-							</Button>
-							<Button
-								variant="default"
-								className="bg-green-600 hover:bg-green-700"
-								onClick={handleOpenAprovar}
-								disabled={isAprovando || isRejeitando} // Corrigido
-							>
-								<Check className="mr-2 h-4 w-4" />
-								Aprovar
-							</Button>
-						</div>
-					)}
-				</DialogContent>
-			</Dialog>
+			{/* 8. (REMOVIDO) O <Dialog> de Ações (isActionsOpen) */}
 
-			{/* Alert de Confirmação "Aprovar" */}
+			{/* 9. (RESTAURADO) Alert de Confirmação "Aprovar" */}
 			<AlertDialog
 				open={isAprovarOpen}
 				onOpenChange={handleCloseDialogs}
@@ -317,7 +300,7 @@ export default function AssociacoesPage() {
 						<AlertDialogAction
 							onClick={handleConfirmarAprovar}
 							disabled={isAprovando}
-							className="bg-green-600 hover:bg-green-700"
+							className="bg-green-600 hover:bg-green-700 text-white"
 						>
 							{isAprovando ? 'Aprovando...' : 'Sim, Aprovar'}
 						</AlertDialogAction>
@@ -325,7 +308,7 @@ export default function AssociacoesPage() {
 				</AlertDialogContent>
 			</AlertDialog>
 
-			{/* Alert de Confirmação "Rejeitar" (Corrigido) */}
+			{/* 10. (RESTAURADO) Alert de Confirmação "Rejeitar" */}
 			<AlertDialog
 				open={isRejeitarOpen}
 				onOpenChange={handleCloseDialogs}
@@ -346,7 +329,7 @@ export default function AssociacoesPage() {
 						<AlertDialogAction
 							onClick={handleConfirmarRejeitar}
 							disabled={isRejeitando}
-							className="bg-red-500 hover:bg-red-600"
+							className="bg-red-500 hover:bg-red-600 text-white"
 						>
 							{isRejeitando ? 'Rejeitando...' : 'Sim, Rejeitar'}
 						</AlertDialogAction>

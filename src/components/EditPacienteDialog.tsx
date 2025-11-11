@@ -251,7 +251,7 @@ export function EditPacienteDialog({
 												value={field.value || ''}
 												onChange={(e) => field.onChange(e.target.value)}
 												disabled={isUpdating}
-												className="w-full"
+												className="block w-full"
 											/>
 										</FormControl>
 										<FormMessage />
