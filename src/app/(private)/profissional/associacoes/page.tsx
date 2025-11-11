@@ -87,12 +87,26 @@ export default function AssociacoesPage() {
 	}
 	const handleConfirmarAprovar = () => {
 		if (selectedAssociacao) {
-			aprovar(selectedAssociacao.id, { onSuccess: handleCloseDialogs })
+			aprovar(selectedAssociacao.id, {
+				onSuccess: handleCloseDialogs,
+				onError: () => {
+					// O toast de erro já é mostrado pelo hook (em associacao.queries)
+					// Nós apenas garantimos que o dialog feche.
+					handleCloseDialogs()
+				},
+			})
 		}
 	}
 	const handleConfirmarRejeitar = () => {
 		if (selectedAssociacao) {
-			rejeitar(selectedAssociacao.id, { onSuccess: handleCloseDialogs })
+			rejeitar(selectedAssociacao.id, {
+				onSuccess: handleCloseDialogs,
+				onError: () => {
+					// O toast de erro já é mostrado pelo hook
+					// Nós apenas garantimos que o dialog feche.
+					handleCloseDialogs()
+				},
+			})
 		}
 	}
 
