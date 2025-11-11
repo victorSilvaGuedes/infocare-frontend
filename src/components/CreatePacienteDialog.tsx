@@ -63,12 +63,10 @@ const formSchema = z.object({
 	cpf: z
 		.string()
 		.length(14, { message: 'CPF deve estar no formato xxx.xxx.xxx-xx' }),
-	dataNascimento: z.date({
-		error: (issue) =>
-			issue.input === undefined
-				? 'Data de nascimento é obrigatória.'
-				: 'Por favor, insira uma data válida.',
-	}),
+	dataNascimento: z
+		.string()
+		.nonempty('Data de nascimento é obrigatória.')
+		.regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de data inválido.'),
 	telefone: z
 		.string()
 		.optional()
@@ -102,7 +100,10 @@ export function CreatePacienteDialog({
 
 	const onSubmit = async (data: FormValues) => {
 		try {
-			await createPaciente(data)
+			await createPaciente({
+				...data,
+				dataNascimento: new Date(data.dataNascimento),
+			})
 			onOpenChange(false)
 		} catch (error) {
 			console.error('Falha ao criar paciente:', error)
@@ -181,14 +182,10 @@ export function CreatePacienteDialog({
 										<FormControl>
 											<Input
 												type="date"
-												value={
-													field.value
-														? field.value.toISOString().split('T')[0]
-														: ''
-												}
-												onChange={(e) => field.onChange(e.target.valueAsDate)}
+												value={field.value || ''}
+												onChange={(e) => field.onChange(e.target.value)}
 												disabled={isPending}
-												className="block w-full"
+												className="w-full"
 											/>
 										</FormControl>
 										<FormMessage />

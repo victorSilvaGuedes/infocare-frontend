@@ -9,12 +9,10 @@ import {
 } from '@/app/queries/pacientes.queries'
 import { AppLoader } from './AppLoader'
 
-// Zod e React Hook Form
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
-// UI (Shadcn)
 import { Button } from '@/components/ui/button'
 import {
 	Dialog,
@@ -33,19 +31,8 @@ import {
 	FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Calendar } from '@/components/ui/calendar'
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from '@/components/ui/popover'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { AlertTriangle, CalendarIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
-
-// 1. (NOVO) Imports do Select
+import { AlertTriangle } from 'lucide-react'
 import {
 	Select,
 	SelectContent,
@@ -55,7 +42,7 @@ import {
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
-// --- Funções de Máscara (Mantidas) ---
+// --- Máscaras ---
 const maskCPF = (value: string) => {
 	return value
 		.replace(/\D/g, '')
@@ -74,22 +61,20 @@ const maskTelefone = (value: string) => {
 		.substring(0, 15)
 }
 
-// Schema Zod (Sem alteração)
+// --- Schema ---
 const updatePacienteSchema = z.object({
 	nome: z.string().min(3, { message: 'Nome deve ter no mínimo 3 caracteres.' }),
 	cpf: z
 		.string()
 		.length(14, { message: 'CPF deve estar no formato xxx.xxx.xxx-xx' }),
-	dataNascimento: z.date({
-		error: (issue) =>
-			issue.input === undefined
-				? 'Data de nascimento é obrigatória.'
-				: 'Por favor, insira uma data válida.',
-	}),
+	dataNascimento: z
+		.string()
+		.nonempty('Data de nascimento é obrigatória.')
+		.regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de data inválido.'),
 	tipoSanguineo: z
 		.string()
 		.optional()
-		.transform((val) => (val === '' ? undefined : val)),
+		.transform((val) => (val === '' || val === 'none' ? undefined : val)),
 	telefone: z
 		.string()
 		.optional()
@@ -98,7 +83,7 @@ const updatePacienteSchema = z.object({
 
 type UpdatePacienteFormValues = z.infer<typeof updatePacienteSchema>
 
-// 2. (NOVO) Array de tipos sanguíneos
+// --- Tipos sanguíneos ---
 const tiposSanguineos = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
 interface EditPacienteDialogProps {
@@ -112,46 +97,52 @@ export function EditPacienteDialog({
 	open,
 	onOpenChange,
 }: EditPacienteDialogProps) {
-	// ... (Hooks 'usePacienteById' e 'useUpdatePaciente' sem alteração) ...
 	const {
 		data: paciente,
 		isLoading,
 		isError,
 		error,
 	} = usePacienteById(pacienteId)
+
 	const { mutate: updatePaciente, isPending: isUpdating } = useUpdatePaciente()
 
 	const form = useForm({
 		resolver: zodResolver(updatePacienteSchema),
-		// Valores padrão vazios ou indefinidos
 		defaultValues: {
 			nome: '',
 			cpf: '',
-			dataNascimento: undefined,
+			dataNascimento: '',
 			tipoSanguineo: '',
 			telefone: '',
 		},
 	})
 
-	// ... (useEffect e onSubmit sem alteração) ...
 	useEffect(() => {
 		if (paciente) {
 			form.reset({
-				...paciente,
-				dataNascimento: new Date(paciente.dataNascimento),
+				nome: paciente.nome,
+				cpf: paciente.cpf,
+				dataNascimento: paciente.dataNascimento
+					? new Date(paciente.dataNascimento).toISOString().split('T')[0]
+					: '',
 				tipoSanguineo: paciente.tipoSanguineo || '',
 				telefone: paciente.telefone || '',
 			})
 		}
 	}, [paciente, form])
 
+	// --- onSubmit padronizado ---
 	const onSubmit = (values: UpdatePacienteFormValues) => {
 		if (!pacienteId) return
+
 		const dataToUpdate: CreatePacienteDTO = {
-			...values,
-			tipoSanguineo: values.tipoSanguineo || undefined,
-			telefone: values.telefone || undefined,
+			nome: values.nome,
+			cpf: values.cpf,
+			dataNascimento: new Date(values.dataNascimento),
+			tipoSanguineo: values.tipoSanguineo,
+			telefone: values.telefone,
 		}
+
 		updatePaciente(
 			{ id: pacienteId, ...dataToUpdate },
 			{
@@ -168,7 +159,7 @@ export function EditPacienteDialog({
 			form.reset({
 				nome: '',
 				cpf: '',
-				dataNascimento: undefined,
+				dataNascimento: '',
 				tipoSanguineo: '',
 				telefone: '',
 			})
@@ -184,7 +175,7 @@ export function EditPacienteDialog({
 				<DialogHeader>
 					<DialogTitle>Editar Paciente</DialogTitle>
 					<DialogDescription>
-						Atualize os dados do paciente. Clique em salvar para aplicar.
+						Atualize os dados do paciente e clique em salvar.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -204,26 +195,28 @@ export function EditPacienteDialog({
 					<Form {...form}>
 						<form
 							onSubmit={form.handleSubmit(onSubmit)}
-							className="space-y-4"
+							className="space-y-4 py-4"
 						>
-							{/* --- Nome (Sem alteração) --- */}
+							{/* Nome */}
 							<FormField
 								control={form.control}
 								name="nome"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Nome</FormLabel>
+										<FormLabel>Nome Completo</FormLabel>
 										<FormControl>
 											<Input
-												placeholder="Nome completo"
+												placeholder="Nome do paciente"
 												{...field}
+												disabled={isUpdating}
 											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
 								)}
 							/>
-							{/* --- CPF (Sem alteração) --- */}
+
+							{/* CPF */}
 							<FormField
 								control={form.control}
 								name="cpf"
@@ -237,58 +230,36 @@ export function EditPacienteDialog({
 												onChange={(e) =>
 													field.onChange(maskCPF(e.target.value))
 												}
+												disabled={isUpdating}
 											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
 								)}
 							/>
-							{/* --- Data de Nascimento (Sem alteração) --- */}
+
+							{/* Data de Nascimento (igual CreatePacienteDialog) */}
 							<FormField
 								control={form.control}
 								name="dataNascimento"
 								render={({ field }) => (
-									<FormItem className="flex flex-col">
+									<FormItem>
 										<FormLabel>Data de Nascimento</FormLabel>
-										<Popover>
-											<PopoverTrigger asChild>
-												<FormControl>
-													<Button
-														variant={'outline'}
-														className={cn(
-															'w-full pl-3 text-left font-normal',
-															!field.value && 'text-muted-foreground'
-														)}
-													>
-														{field.value ? (
-															format(field.value, 'PPP', { locale: ptBR })
-														) : (
-															<span>Selecione a data</span>
-														)}
-														<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-													</Button>
-												</FormControl>
-											</PopoverTrigger>
-											<PopoverContent
-												className="w-auto p-0"
-												align="start"
-											>
-												<Calendar
-													mode="single"
-													selected={field.value}
-													onSelect={field.onChange}
-													disabled={(date) =>
-														date > new Date() || date < new Date('1900-01-01')
-													}
-													initialFocus
-												/>
-											</PopoverContent>
-										</Popover>
+										<FormControl>
+											<Input
+												type="date"
+												value={field.value || ''}
+												onChange={(e) => field.onChange(e.target.value)}
+												disabled={isUpdating}
+												className="w-full"
+											/>
+										</FormControl>
 										<FormMessage />
 									</FormItem>
 								)}
 							/>
-							{/* --- Telefone (Sem alteração) --- */}
+
+							{/* Telefone */}
 							<FormField
 								control={form.control}
 								name="telefone"
@@ -297,11 +268,12 @@ export function EditPacienteDialog({
 										<FormLabel>Telefone (Opcional)</FormLabel>
 										<FormControl>
 											<Input
-												placeholder="(xx) 9xxxx-xxxx"
+												placeholder="(xx) xxxxx-xxxx"
 												{...field}
 												onChange={(e) =>
 													field.onChange(maskTelefone(e.target.value))
 												}
+												disabled={isUpdating}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -309,7 +281,7 @@ export function EditPacienteDialog({
 								)}
 							/>
 
-							{/* 3. (ATUALIZADO) Campo Tipo Sanguíneo --- */}
+							{/* Tipo Sanguíneo */}
 							<FormField
 								control={form.control}
 								name="tipoSanguineo"
@@ -317,8 +289,10 @@ export function EditPacienteDialog({
 									<FormItem>
 										<FormLabel>Tipo Sanguíneo (Opcional)</FormLabel>
 										<Select
-											onValueChange={field.onChange}
-											value={field.value || ''} // Garante que o valor é controlado
+											onValueChange={(v) =>
+												field.onChange(v === 'none' ? undefined : v)
+											}
+											value={field.value || ''}
 											disabled={isUpdating}
 										>
 											<FormControl>
@@ -328,7 +302,6 @@ export function EditPacienteDialog({
 											</FormControl>
 											<SelectContent>
 												<ScrollArea className="h-48">
-													{/* Opção para limpar o campo */}
 													<SelectItem value="none">
 														Não sabe / Não informar
 													</SelectItem>
@@ -348,7 +321,7 @@ export function EditPacienteDialog({
 								)}
 							/>
 
-							{/* --- Footer (Sem alteração) --- */}
+							{/* Footer */}
 							<DialogFooter>
 								<Button
 									type="button"
@@ -360,7 +333,7 @@ export function EditPacienteDialog({
 								</Button>
 								<Button
 									type="submit"
-									disabled={isUpdating || isLoading}
+									disabled={isUpdating}
 								>
 									{isUpdating ? 'Salvando...' : 'Salvar Alterações'}
 								</Button>

@@ -12,7 +12,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
 export const metadata: Metadata = {
-	// ...
+	title: 'InfoCare',
+	description: 'Aplicativo para gestão de informações de saúde',
 }
 
 export default function RootLayout({
