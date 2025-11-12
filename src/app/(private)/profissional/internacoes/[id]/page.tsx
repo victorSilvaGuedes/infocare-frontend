@@ -88,6 +88,7 @@ export default function InternacaoDetailPage() {
 			{/* --- Resumo da Internação --- */}
 			<div className="space-y-2 px-6 pb-4">
 				<div className="flex flex-wrap gap-2">
+					<Badge variant="destructive">ID: {internacao.id}</Badge>
 					<Badge
 						variant="default"
 						className={cn(
@@ -97,10 +98,8 @@ export default function InternacaoDetailPage() {
 					>
 						{internacao.status}
 					</Badge>
-					<Badge variant="secondary">
-						Quarto: {internacao.quarto || 'N/A'}
-					</Badge>
-					<Badge variant="secondary">
+					<Badge variant="default">Quarto: {internacao.quarto || 'N/A'}</Badge>
+					<Badge variant="default">
 						Leito: {internacao.leito?.toUpperCase() || 'N/A'}
 					</Badge>
 				</div>

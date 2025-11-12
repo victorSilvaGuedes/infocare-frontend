@@ -282,7 +282,7 @@ export default function InternacoesPage() {
 										<CardTitle className="text-lg font-medium">
 											{internacao.paciente.nome}
 										</CardTitle>
-										<CardDescription className="text-sm">
+										<CardDescription className="text-sm space-y-1">
 											<p>
 												<span className="font-medium">Diagnóstico:</span>{' '}
 												{internacao.diagnostico || 'Sem diagnóstico'}
@@ -293,23 +293,28 @@ export default function InternacoesPage() {
 											</p>
 										</CardDescription>
 									</div>
-									<Badge
-										variant="default"
-										className={cn(
-											internacao.status === 'ALTA' && 'bg-green-600 text-white',
-											internacao.status === 'ATIVA' && 'bg-blue-600 text-white'
-										)}
-									>
-										{internacao.status}
-									</Badge>
+									<div className="flex flex-col gap-2">
+										<Badge variant="destructive">ID: {internacao.id}</Badge>
+										<Badge
+											variant="default"
+											className={cn(
+												internacao.status === 'ALTA' &&
+													'bg-green-600 text-white',
+												internacao.status === 'ATIVA' &&
+													'bg-blue-600 text-white'
+											)}
+										>
+											{internacao.status}
+										</Badge>
+									</div>
 								</CardHeader>
 								<CardContent className="space-y-1 flex flex-row items-center justify-between">
 									<div className="space-y-2">
 										<div className="flex flex-wrap gap-2">
-											<Badge variant="secondary">
+											<Badge variant="default">
 												Quarto: {internacao.quarto || 'N/A'}
 											</Badge>
-											<Badge variant="secondary">
+											<Badge variant="default">
 												Leito: {internacao.leito?.toUpperCase() || 'N/A'}
 											</Badge>
 										</div>

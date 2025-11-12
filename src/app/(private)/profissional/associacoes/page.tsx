@@ -246,10 +246,11 @@ export default function AssociacoesPage() {
 										Paciente: {associacao.internacao.paciente.nome}
 									</p>
 									<p className="text-sm text-muted-foreground">
-										Diagnóstico: {associacao.internacao.diagnostico || 'N/A'}
+										<span className="font-medium">Diagnóstico:</span>{' '}
+										{associacao.internacao.diagnostico}
 									</p>
 									<p className="text-sm text-muted-foreground">
-										Data da Solicitação:{' '}
+										<span className="font-medium">Data da Solicitação:</span>{' '}
 										{formatData(associacao.dataSolicitacao)}
 									</p>
 								</CardContent>

@@ -228,7 +228,7 @@ export function CreateEvolucaoDialog({
 						/>
 
 						{/* Painel de Gravação */}
-						<div className="flex w-full items-center justify-center gap-4">
+						<div className="flex flex-col w-full items-center justify-center gap-4">
 							{!isRecording ? (
 								<Button
 									type="button"
