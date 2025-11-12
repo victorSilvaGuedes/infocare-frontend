@@ -17,7 +17,7 @@ export default function Home() {
 		// Fundo da página que centraliza o Card
 		<main className="flex min-h-screen flex-col items-center justify-center">
 			{/* O Card limita o conteúdo e dá a borda */}
-			<Card className="w-full max-w-sm text-center p-6">
+			<Card className="w-full max-w-sm text-center p-4">
 				<CardHeader>
 					<Image
 						src="/logo.png" // Verifique o caminho do seu logo na pasta /public
