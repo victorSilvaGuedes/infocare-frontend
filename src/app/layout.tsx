@@ -46,11 +46,6 @@ export default function RootLayout({
 							</div> */}
 							{children}
 						</div>
-
-						{/* 2. Adicione o Toaster aqui (fora do div principal) 
-              Ele funcionará globalmente.
-              Usamos 'richColors' para estilos mais bonitos de sucesso/erro.
-          */}
 						<Toaster
 							richColors
 							closeButton
