@@ -1,7 +1,6 @@
 // app/page.tsx
 import Link from 'next/link'
 import Image from 'next/image'
-
 import { Button } from '@/components/ui/button'
 import {
 	Card,
@@ -14,15 +13,13 @@ import {
 
 export default function Home() {
 	return (
-		// Fundo da página que centraliza o Card
-		<main className="flex min-h-screen flex-col items-center justify-center">
-			{/* O Card limita o conteúdo e dá a borda */}
-			<Card className="w-full max-w-sm text-center p-10">
+		<main className="flex min-h-screen flex-col items-center justify-center p-6">
+			<Card className="w-full max-w-sm text-center">
 				<CardHeader>
 					<Image
-						src="/logo.png" // Verifique o caminho do seu logo na pasta /public
+						src="/logo.png"
 						alt="Logo InfoCare"
-						width={100} // Tamanho menor para o card
+						width={100}
 						height={100}
 						className="mx-auto mb-4"
 					/>
@@ -38,11 +35,7 @@ export default function Home() {
 				</CardContent>
 
 				<CardFooter>
-					<Button
-						asChild
-						size="lg"
-						className="w-full"
-					>
+					<Button asChild size="lg" className="w-full">
 						<Link href="/login">Começar</Link>
 					</Button>
 				</CardFooter>
