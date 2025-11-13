@@ -1,4 +1,6 @@
-// app/stores/useAuthStore.ts
+// Salve em: app/stores/useAuthStore.ts
+// (Versão ATUALIZADA com a ação setUsuario)
+
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 
@@ -16,6 +18,7 @@ interface AuthState {
 	isHydrating: boolean
 	login: (token: string, usuario: Usuario) => void
 	logout: () => void
+	setUsuario: (usuario: Usuario) => void // <--- 1. (NOVO) Adicione a ação ao tipo
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -39,17 +42,17 @@ export const useAuthStore = create<AuthState>()(
 					usuario: null,
 					isAuthenticated: false,
 				}),
+
+			// 2. (NOVO) Adicione a implementação da ação
+			// Ela atualiza apenas os dados do 'usuario' e mantém o 'token'
+			setUsuario: (usuario) => set((state) => ({ ...state, usuario })),
 		}),
 		{
 			name: 'infocare-auth-storage',
 			storage: createJSONStorage(() => localStorage),
 
-			// Versão compatível com os tipos do zustand persist:
-			// a função externa é chamada antes da reidratação e pode retornar
-			// uma função que será chamada após a reidratação com (state?, error?)
 			onRehydrateStorage: () => (state) => {
 				if (state) {
-					// Mutamos o objeto reidratado para marcar que a hidratação terminou.
 					state.isHydrating = false
 				}
 			},

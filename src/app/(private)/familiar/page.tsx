@@ -1,21 +1,28 @@
+// Salve como: app/(private)/familiar/page.tsx
+// (Versão REATORADA - Com o botão "Associações" unificado)
 'use client'
 
-import Link from 'next/link'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Users, Send, Mail, LogOut } from 'lucide-react'
+// 1. (ATUALIZADO) Ícones corretos
+import { Mail, LogOut, User, BedDouble } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
 
-// Hooks de autenticação
+// Hooks e Componentes
 import { useAuthStore } from '@/app/stores/useAuthStore'
 import { useAuthReady } from '@/app/hooks/useAuthReady'
 import { AppLoader } from '@/components/AppLoader'
+import { MenuButton } from '@/components/MenuButton'
+import { MenuAction } from '@/components/MenuAction'
+import { EditFamiliarDialog } from '@/components/EditFamiliarDialog'
 
 export default function FamiliarPage() {
 	const router = useRouter()
 	const { logout } = useAuthStore()
 	const { ready, usuario } = useAuthReady()
+
+	const [isEditOpen, setIsEditOpen] = useState(false)
 
 	const handleLogout = () => {
 		logout()
@@ -28,73 +35,61 @@ export default function FamiliarPage() {
 	}
 
 	return (
-		<div className="flex flex-1 flex-col">
-			{/* Cabeçalho de Boas-Vindas */}
-			<div className="p-6">
-				<h1 className="text-2xl font-bold">Olá, {usuario?.nome}</h1>
-				<p className="text-muted-foreground">O que gostaria de fazer hoje?</p>
-			</div>
+		<>
+			<div className="flex flex-1 flex-col">
+				{/* Cabeçalho de Boas-Vindas */}
+				<div className="p-6">
+					<h1 className="text-2xl font-bold">Olá, {usuario?.nome}</h1>
+					<p className="text-muted-foreground">O que gostaria de fazer hoje?</p>
+				</div>
 
-			{/* Grid de Ações */}
-			<div className="flex-1 p-6 pt-0">
-				<div className="grid grid-cols-2 gap-4">
-					{/* --- LINKS CORRIGIDOS --- */}
-					<MenuButton
-						href="/familiar/associar" // SEM /dashboard/
-						icon={Send}
-						label="Solicitar Associação"
-						description="Vincular-se a um paciente"
-					/>
-					<MenuButton
-						href="/familiar/pacientes" // SEM /dashboard/
-						icon={Users}
-						label="Pacientes Associados"
-						description="Ver internações e evoluções"
-					/>
-					<MenuButton
-						href="/familiar/solicitacoes" // SEM /dashboard/
-						icon={Mail}
-						label="Minhas Solicitações"
-						description="Ver status (pendente, etc.)"
-					/>
-					{/* --- FIM DA CORREÇÃO DOS LINKS --- */}
+				{/* Lista de Ações (Atualizada) */}
+				<div className="flex-1 p-6 pt-0">
+					<div className="flex flex-col gap-3">
+						<MenuButton
+							href="/familiar/internacoes"
+							icon={BedDouble}
+							label="Internações Associadas"
+							description="Ver internações e evoluções de pacientes"
+						/>
+
+						{/* 2. (ATUALIZADO) Botão unificado com o nome correto */}
+						<MenuButton
+							href="/familiar/associacoes" // Aponta para a lista
+							icon={Mail}
+							label="Minhas Associações"
+							description="Ver status e solicitar novos acessos"
+						/>
+
+						{/* O botão "Solicitar Associação" (Send) foi removido */}
+
+						{/* Ações de Perfil */}
+						<MenuAction
+							onClick={() => setIsEditOpen(true)}
+							icon={User}
+							label="Editar Perfil"
+							description="Atualizar seus dados"
+							isDestructive={false}
+						/>
+
+						<Separator />
+
+						<MenuAction
+							onClick={handleLogout}
+							icon={LogOut}
+							label="Sair"
+							description="Encerrar sua sessão"
+							isDestructive={true}
+						/>
+					</div>
 				</div>
 			</div>
 
-			{/* Botão de Sair no Rodapé */}
-			<div className="p-6 pt-0">
-				<Button
-					variant="outline"
-					className="w-full"
-					onClick={handleLogout}
-				>
-					<LogOut className="mr-2 h-4 w-4" />
-					Sair
-				</Button>
-			</div>
-		</div>
-	)
-}
-
-// Componente de Item de Menu (Inalterado)
-interface MenuButtonProps {
-	href: string
-	icon: React.ElementType
-	label: string
-	description: string
-}
-function MenuButton({ href, icon: Icon, label, description }: MenuButtonProps) {
-	return (
-		<Link
-			href={href}
-			passHref
-			className="h-full"
-		>
-			<Card className="flex h-full flex-col justify-center p-4 transition-colors hover:bg-muted/50">
-				<Icon className="mb-2 h-7 w-7 text-primary" />
-				<p className="text-base font-semibold">{label}</p>
-				<p className="text-xs text-muted-foreground">{description}</p>
-			</Card>
-		</Link>
+			{/* Renderizar o Dialog */}
+			<EditFamiliarDialog
+				open={isEditOpen}
+				onOpenChange={setIsEditOpen}
+			/>
+		</>
 	)
 }

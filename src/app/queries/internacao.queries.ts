@@ -12,7 +12,7 @@ import { Evolucao } from './evolucao.queries'
 
 // --- Definições de Tipos (Baseadas no Backend) ---
 
-type StatusInternacao = 'ATIVA' | 'ALTA'
+export type StatusInternacao = 'ATIVA' | 'ALTA'
 
 export type Internacao = {
 	id: number
