@@ -32,7 +32,7 @@ export default function LoginPage() {
 				</CardHeader>
 				<CardContent className="flex flex-col gap-4">
 					{/* QR Code e Texto lado a lado ou empilhado (aqui empilhado para caber no canto) */}
-					<div className="flex justify-center bg-white p-1 rounded-lg border w-fit mx-auto">
+					<div className="flex justify-center w-fit mx-auto">
 						{/* Certifique-se que o arquivo existe em public/qrcode.png */}
 						<Image
 							src="/qrcode.png"
